@@ -1,19 +1,20 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-// import User from './models/User.js'; // Kiểm tra lại nếu Render dùng DB online thì model này phải trỏ đúng link
 import authRoutes from './routes/authRoutes.js';
 import os from 'os';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-
-// 1. CỔNG (PORT): Render sẽ cấp cổng ngẫu nhiên qua biến môi trường.
-// Bạn phải dùng process.env.PORT, không được cố định số 5000.
 const PORT = process.env.PORT || 5000; 
 
-// 2. CẤU HÌNH CORS (Bảo mật hơn khi lên Production)
+// 1. CẤU HÌNH CORS
 app.use(cors({
-    origin: true, // Khi lên Render, 'true' vẫn ổn nhưng tốt nhất sau này là link Web của Demi
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'token']
@@ -22,30 +23,42 @@ app.use(cors({
 app.use(express.json()); 
 app.use(cookieParser()); 
 
-// 3. LOGGING (Giữ nguyên để debug trên Render Dashboard)
+// 2. LOGGING
 app.use((req, res, next) => {
     console.log(`[${new Date().toLocaleTimeString()}] ${req.method} -> ${req.url}`);
     next();
 });
 
-// 4. ĐĂNG KÝ ROUTES
+// --- TÍCH HỢP FRONTEND ---
+
+// 3. Phục vụ các file tĩnh (css, js, img) từ thư mục public
+// (Thư mục này chứa nội dung của folder 'dist' sau khi Demi build React)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 4. CÁC ROUTE API (Phải đặt TRƯỚC route '*')
 app.use('/api/auth', authRoutes);
 
-app.get('/', (req, res) => {
-    res.send("API DemiMart is Running... 🚀");
+// 5. XỬ LÝ SINGLE PAGE APPLICATION (SPA)
+// Chế độ này giúp React Router hoạt động mượt mà ngay cả khi nhấn F5
+app.get('*', (req, res) => {
+    // Nếu yêu cầu bắt đầu bằng /api mà không khớp cái nào ở trên thì báo lỗi JSON
+    if (req.url.startsWith('/api')) {
+        return res.status(404).json({ message: "API endpoint not found" });
+    }
+    // Còn lại, gửi file index.html của React về cho trình duyệt
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 5. LẮNG NGHE KẾT NỐI
-// Quan trọng: Phải lắng nghe trên '0.0.0.0' để Render có thể định tuyến
+// --- KẾT THÚC FRONTEND ---
+
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server đang chạy trên port: ${PORT}`);
+    console.log(`🚀 Server đang rực rỡ tại port: ${PORT}`);
     if (process.env.NODE_ENV !== 'production') {
         const ip = getLocalIp();
         console.log(`📱 Local IP: http://${ip}:${PORT}`);
     }
 });
 
-// Hàm lấy IP chỉ có tác dụng khi chạy ở máy nhà
 function getLocalIp() {
     const interfaces = os.networkInterfaces();
     for (const name of Object.keys(interfaces)) {
@@ -54,4 +67,4 @@ function getLocalIp() {
         }
     }
     return 'localhost';
-};
+}
