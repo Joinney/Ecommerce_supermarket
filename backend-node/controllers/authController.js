@@ -100,16 +100,19 @@ export const signin = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
+        // --- ĐOẠN SỬA QUAN TRỌNG NHẤT ---
         res.json({ 
             message: "Đăng nhập thành công!", 
-            accessToken, 
+            token: accessToken, // Đổi tên thành 'token' để khớp với AuthContext trên Mobile
             user: { 
                 id: user.user_id,
                 username: user.username, 
+                email: user.email, // Thêm email để hiển thị ở Profile
                 role: user.role, 
                 full_name: user.full_name 
             } 
         });
+        // ------------------------------
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

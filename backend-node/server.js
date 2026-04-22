@@ -1,40 +1,57 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import cors from 'cors'; // 1. Thêm dòng này
-import User from './models/User.js';
+import cors from 'cors';
+// import User from './models/User.js'; // Kiểm tra lại nếu Render dùng DB online thì model này phải trỏ đúng link
 import authRoutes from './routes/authRoutes.js';
+import os from 'os';
 
 const app = express();
-const PORT = 5000;
 
-// 2. CẤU HÌNH MIDDLEWARE
-// Chú ý: Cấu hình CORS phải nằm TRÊN các Routes
+// 1. CỔNG (PORT): Render sẽ cấp cổng ngẫu nhiên qua biến môi trường.
+// Bạn phải dùng process.env.PORT, không được cố định số 5000.
+const PORT = process.env.PORT || 5000; 
+
+// 2. CẤU HÌNH CORS (Bảo mật hơn khi lên Production)
 app.use(cors({
-    origin: 'http://localhost:5173', // Cho phép Frontend của Demi truy cập
-    credentials: true,               // Cho phép gửi Cookie và Header Token
+    origin: true, // Khi lên Render, 'true' vẫn ổn nhưng tốt nhất sau này là link Web của Demi
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'token'] // Cho phép các Header này
+    allowedHeaders: ['Content-Type', 'Authorization', 'token']
 }));
 
 app.use(express.json()); 
 app.use(cookieParser()); 
 
-// 3. ĐĂNG KÝ ROUTES
+// 3. LOGGING (Giữ nguyên để debug trên Render Dashboard)
+app.use((req, res, next) => {
+    console.log(`[${new Date().toLocaleTimeString()}] ${req.method} -> ${req.url}`);
+    next();
+});
+
+// 4. ĐĂNG KÝ ROUTES
 app.use('/api/auth', authRoutes);
 
-// Route kiểm tra database
-app.get('/test-db', async (req, res) => {
-  try {
-    const users = await User.getAll();
-    res.json({
-      message: "Kết nối thành công rồi Demi ơi!",
-      data: users
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+app.get('/', (req, res) => {
+    res.send("API DemiMart is Running... 🚀");
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
+// 5. LẮNG NGHE KẾT NỐI
+// Quan trọng: Phải lắng nghe trên '0.0.0.0' để Render có thể định tuyến
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server đang chạy trên port: ${PORT}`);
+    if (process.env.NODE_ENV !== 'production') {
+        const ip = getLocalIp();
+        console.log(`📱 Local IP: http://${ip}:${PORT}`);
+    }
 });
+
+// Hàm lấy IP chỉ có tác dụng khi chạy ở máy nhà
+function getLocalIp() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+        }
+    }
+    return 'localhost';
+};

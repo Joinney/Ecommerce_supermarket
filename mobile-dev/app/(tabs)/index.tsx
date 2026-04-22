@@ -1,98 +1,140 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, SafeAreaView } from 'react-native';
+import { Search, ShoppingCart, MapPin, ChevronDown, Clock } from 'lucide-react-native';
 
 export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView style={styles.container}>
+      {/* 1. TOP HEADER (Logo, Address, Cart) */}
+      <View style={styles.topHeader}>
+        <View>
+          <Text style={styles.logoText}>DemiMart</Text>
+          <TouchableOpacity style={styles.deliveryRow}>
+            <Text style={styles.deliveryText}>Giao vào ngày mai</Text>
+            <ChevronDown size={14} color="#2563eb" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.locationBtn}>
+            <MapPin size={14} color="#64748b" />
+            <Text style={styles.locationText}>94538</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cartBtn}>
+            <ShoppingCart size={20} color="#2563eb" />
+          </TouchableOpacity>
+        </View>
+      </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      {/* 2. SEARCH BAR */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Search size={18} color="#94a3b8" />
+          <TextInput placeholder="Tìm kiếm sản phẩm" style={styles.searchInput} />
+        </View>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* 3. QUICK CATEGORIES (Hải sản, Trái cây...) */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
+          <QuickCat label="Trái cây" img="https://cdn-icons-png.flaticon.com/512/3194/3194766.png" />
+          <QuickCat label="Hải sản" img="https://cdn-icons-png.flaticon.com/512/2346/2346761.png" />
+          <QuickCat label="Đồ ăn liền" img="https://cdn-icons-png.flaticon.com/512/2713/2713931.png" />
+          <QuickCat label="Thịt tươi" img="https://cdn-icons-png.flaticon.com/512/1046/1046769.png" />
+        </ScrollView>
+
+        {/* 4. MAIN BANNER (Giảm $20) */}
+        <View style={styles.bannerContainer}>
+          <Image 
+            source={{ uri: 'https://img.freepik.com/free-vector/food-delivery-banner-template_23-2148906105.jpg' }} 
+            style={styles.mainBanner}
+          />
+          <View style={styles.bannerContent}>
+            <Text style={styles.bannerTag}>ƯU ĐÃI ĐĂNG KÝ</Text>
+            <Text style={styles.bannerTitle}>Giảm 50.000đ</Text>
+            <Text style={styles.bannerDesc}>cho đơn hàng đầu tiên</Text>
+          </View>
+        </View>
+
+        {/* 5. CIRCLE MENUS (Tuần lễ ẩm thực...) */}
+        <View style={styles.circleMenuContainer}>
+          <CircleItem label="Flash Sale" img="https://cdn-icons-png.flaticon.com/512/4213/4213936.png" isNew />
+          <CircleItem label="Giá tốt" img="https://cdn-icons-png.flaticon.com/512/2454/2454282.png" isNew />
+          <CircleItem label="Mới về" img="https://cdn-icons-png.flaticon.com/512/3655/3655682.png" />
+          <CircleItem label="Bán chạy" img="https://cdn-icons-png.flaticon.com/512/1170/1170678.png" />
+        </View>
+
+        {/* 6. PRODUCT CARDS */}
+        <View style={styles.productRow}>
+          <ProductCard name="Bún Tươi Ba Cô Gái" price="25.000đ" off="18%" img="https://th.bing.com/th/id/OIP.X-I_5297B7A-iZ3nS16A_gHaHa?rs=1&pid=ImgDetMain" />
+          <ProductCard name="Mì Hảo Hảo Tôm Chua Cay" price="5.000đ" off="10%" img="https://th.bing.com/th/id/OIP.X-I_5297B7A-iZ3nS16A_gHaHa?rs=1&pid=ImgDetMain" />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
+// Sub-components
+const QuickCat = ({ label, img }: any) => (
+  <TouchableOpacity style={styles.qCatItem}>
+    <Image source={{ uri: img }} style={styles.qCatImg} />
+    <Text style={styles.qCatText}>{label}</Text>
+  </TouchableOpacity>
+);
+
+const CircleItem = ({ label, img, isNew }: any) => (
+  <View style={styles.cItemContainer}>
+    <View style={styles.cImgBg}>
+      <Image source={{ uri: img }} style={styles.cImg} />
+      {isNew && <View style={styles.newBadge}><Text style={styles.newText}>NEW</Text></View>}
+    </View>
+    <Text style={styles.cLabel} numberOfLines={2}>{label}</Text>
+  </View>
+);
+
+const ProductCard = ({ name, price, off, img }: any) => (
+  <View style={styles.pCard}>
+    <View style={styles.pTag}><Text style={styles.pTagText}>{off} off</Text></View>
+    <Image source={{ uri: img }} style={styles.pImg} />
+    <Text style={styles.pName}>{name}</Text>
+    <Text style={styles.pPrice}>{price}</Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  topHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, alignItems: 'center' },
+  logoText: { fontSize: 24, fontWeight: '900', color: '#2563eb' },
+  deliveryRow: { flexDirection: 'row', alignItems: 'center' },
+  deliveryText: { fontSize: 13, color: '#1e293b', marginRight: 4, fontWeight: '500' },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  locationBtn: { flexDirection: 'row', backgroundColor: '#f1f5f9', padding: 8, borderRadius: 20, alignItems: 'center', marginRight: 10 },
+  locationText: { fontSize: 12, color: '#64748b', marginLeft: 4 },
+  cartBtn: { padding: 5 },
+  searchContainer: { paddingHorizontal: 15, marginBottom: 15 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 25, paddingHorizontal: 15, height: 45 },
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 14 },
+  catScroll: { paddingLeft: 15, marginBottom: 20 },
+  qCatItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', padding: 10, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: '#f1f5f9' },
+  qCatImg: { width: 20, height: 20, marginRight: 8 },
+  qCatText: { fontSize: 13, fontWeight: '500' },
+  bannerContainer: { marginHorizontal: 15, borderRadius: 20, overflow: 'hidden', height: 180, marginBottom: 20 },
+  mainBanner: { width: '100%', height: '100%' },
+  bannerContent: { position: 'absolute', top: 20, left: 20 },
+  bannerTag: { fontSize: 10, color: '#db2777', fontWeight: 'bold' },
+  bannerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1e3a8a' },
+  bannerDesc: { color: '#1e3a8a' },
+  circleMenuContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 25 },
+  cItemContainer: { alignItems: 'center', width: 70 },
+  cImgBg: { width: 55, height: 55, borderRadius: 30, backgroundColor: '#f8fafc', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  cImg: { width: 35, height: 35 },
+  cLabel: { fontSize: 11, textAlign: 'center', color: '#334155' },
+  newBadge: { position: 'absolute', top: -5, left: -5, backgroundColor: '#ef4444', paddingHorizontal: 5, borderRadius: 5 },
+  newText: { color: '#fff', fontSize: 8, fontWeight: 'bold' },
+  productRow: { flexDirection: 'row', paddingHorizontal: 15, justifyContent: 'space-between' },
+  pCard: { width: '48%', marginBottom: 20 },
+  pImg: { width: '100%', height: 160, borderRadius: 10, backgroundColor: '#f8fafc' },
+  pTag: { position: 'absolute', top: 10, left: 10, backgroundColor: '#ef4444', padding: 4, borderRadius: 4, zIndex: 1 },
+  pTagText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+  pName: { marginTop: 10, fontSize: 14, fontWeight: '500' },
+  pPrice: { fontSize: 16, fontWeight: 'bold', color: '#ef4444', marginTop: 5 }
 });

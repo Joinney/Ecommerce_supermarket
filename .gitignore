@@ -1,4 +1,39 @@
+# --- THƯ MỤC THƯ VIỆN (NẶNG, KHÔNG PUSH) ---
 node_modules/
 backend-node/node_modules/
 frontend-web/node_modules/
+
+# --- BẢO MẬT (CỰC KỲ QUAN TRỌNG) ---
 .env
+backend-node/.env
+frontend-web/.env
+*.pem
+*.key
+
+# --- MOBILE (EXPO & REACT NATIVE) ---
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+ios/build/
+android/build/
+android/.gradle/
+
+# --- FRONTEND WEB ---
+frontend-web/build/
+frontend-web/dist/
+frontend-web/.next/
+
+# --- HỆ ĐIỀU HÀNH & TRÌNH SOẠN THẢO ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# --- CÁC FILE TẠM ---
+.npm
+.eslintcache

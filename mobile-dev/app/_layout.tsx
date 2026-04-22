@@ -1,24 +1,37 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import * as NavigationBar from 'expo-navigation-bar';
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import { AuthProvider } from './context/AuthContext'; // Đảm bảo đúng đường dẫn tới thư mục context
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      // Ẩn thanh điều hướng hệ thống nhưng giữ nội dung tràn viền
+      NavigationBar.setVisibilityAsync("hidden");
+      NavigationBar.setBehaviorAsync("overlay-swipe");
+    }
+  }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+    // Bọc toàn bộ App trong AuthProvider để mọi màn hình đều biết trạng thái đăng nhập
+    <AuthProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* 1. Màn hình điều hướng gốc */}
+        <Stack.Screen name="index" options={{ href: null }} /> 
+
+        {/* 2. Nhóm Trang chủ (Mặc định vào đây trước) */}
+        <Stack.Screen name="(tabs)" />
+
+        {/* 3. Nhóm Đăng nhập (Hiện lên dạng Modal trượt từ dưới) */}
+        <Stack.Screen 
+          name="(auth)" 
+          options={{ 
+            presentation: 'modal', 
+            animation: 'slide_from_bottom' 
+          }} 
+        />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    </AuthProvider>
   );
 }
