@@ -29,23 +29,19 @@ app.use((req, res, next) => {
     next();
 });
 
-// --- TÍCH HỢP FRONTEND ---
-
-// 3. Phục vụ các file tĩnh (css, js, img) từ thư mục public
-// (Thư mục này chứa nội dung của folder 'dist' sau khi Demi build React)
+// 3. Phục vụ các file tĩnh
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 4. CÁC ROUTE API (Phải đặt TRƯỚC route '*')
+// 4. CÁC ROUTE API
 app.use('/api/auth', authRoutes);
 
-// 5. XỬ LÝ SINGLE PAGE APPLICATION (SPA)
-// Chế độ này giúp React Router hoạt động mượt mà ngay cả khi nhấn F5
-app.get('*', (req, res) => {
-    // Nếu yêu cầu bắt đầu bằng /api mà không khớp cái nào ở trên thì báo lỗi JSON
+// 5. XỬ LÝ SPA (CÁCH MỚI KHÔNG BỊ LỖI PATH-TO-REGEXP)
+app.use((req, res, next) => {
+    // Nếu là yêu cầu API thì cho đi tiếp đến các route API hoặc báo 404 API
     if (req.url.startsWith('/api')) {
-        return res.status(404).json({ message: "API endpoint not found" });
+        return next();
     }
-    // Còn lại, gửi file index.html của React về cho trình duyệt
+    // Tất cả các trường hợp khác (giao diện web), gửi file index.html
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
