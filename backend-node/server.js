@@ -13,25 +13,23 @@ const app = express();
 const PORT = process.env.PORT || 5000; 
 
 // 1. CẤU HÌNH CORS
-// Sửa lại danh sách cho phép (Thêm cả link có dấu / và không có dấu / cho chắc)
+// 1. CẤU HÌNH CORS
 const allowedOrigins = [
     'http://localhost:5173',
-    'http://localhost:3000',
     'https://ecommerce-supermarke-fe.onrender.com',
-    'https://ecommerce-supermarke-fe.onrender.com/' // Thêm bản có dấu xẹt cuối
+    'https://ecommerce-supermarke-fe.onrender.com/' // Thêm cả bản có gạch chéo
 ];
 
 app.use(cors({
-    origin: function (origin, callback) {
-        // Nếu không có origin (như Postman hoặc khi server tự gọi mình) thì cho qua
+    origin: (origin, callback) => {
+        // Cho phép các request không có origin (như Postman hoặc thiết bị di động)
         if (!origin) return callback(null, true);
-        
-        // Kiểm tra xem origin có nằm trong danh sách không
+
         if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            // Log ra để Demi biết chính xác cái link đang bị chặn là gì
-            console.log("CORS bị chặn từ origin:", origin);
+            // DÒNG NÀY CỰC QUAN TRỌNG: Nó sẽ in ra link đang bị lỗi trong Logs Render
+            console.error(`=> CORS chặn Origin: "${origin}"`); 
             callback(new Error('CORS policy không cho phép truy cập từ origin này!'));
         }
     },
