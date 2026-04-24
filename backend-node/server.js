@@ -13,8 +13,23 @@ const app = express();
 const PORT = process.env.PORT || 5000; 
 
 // 1. CẤU HÌNH CORS
+const allowedOrigins = [
+    'http://localhost:5173', // Link của Vite local
+    'http://localhost:3000', // Link nếu bạn chạy build local
+    'https://ecommerce-supermarke-fe.onrender.com' // Link Frontend của Demi trên Render
+];
+
 app.use(cors({
-    origin: true,
+    origin: function (origin, callback) {
+        // Cho phép các request không có origin (như Postman hoặc thiết bị di động)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'CORS policy không cho phép truy cập từ origin này!';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'token']
