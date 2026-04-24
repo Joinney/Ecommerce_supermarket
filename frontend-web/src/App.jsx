@@ -10,41 +10,52 @@ import Footer from "./components/Footer";
 // Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup"; // Đảm bảo Demi đã tạo file này
+import Signup from "./pages/Signup";
 
-// 1. Cấu trúc cho trang chính (Có Header/Sidebar/Footer)
-const AppLayout = () => {
-  return (
-    <div className="min-h-screen bg-[#0b0e14] flex flex-col text-white">
-      <Header />
-      <div className="flex flex-1 pt-20">
-        <Sidebar />
-        <div className="flex flex-col flex-1">
-          <main className="flex-1 p-6 lg:p-10">
-            <Outlet />
-          </main>
-          <Footer />
-        </div>
+/** * 1. LAYOUT CHÍNH (Có Header/Sidebar/Footer)
+ */
+const AppLayout = () => (
+  <div className="min-h-screen bg-[#0b0e14] flex flex-col text-white">
+    <Header />
+    <div className="flex flex-1 pt-20">
+      <Sidebar />
+      <div className="flex flex-col flex-1">
+        <main className="flex-1 p-6 lg:p-10">
+          <Outlet />
+        </main>
+        <Footer />
       </div>
     </div>
-  );
-};
+  </div>
+);
 
-// 2. Cấu trúc cho trang Login/Signup (Biệt lập hoàn toàn)
-const AuthLayout = () => {
-  return (
-    <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center p-6">
-      <Outlet />
-    </div>
-  );
-};
+/** * 2. LAYOUT AUTH (Trang Login/Signup trắng sạch)
+ */
+const AuthLayout = () => (
+  <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center p-6">
+    <Outlet />
+  </div>
+);
 
-// 3. Component bảo vệ: Chỉ cho phép User đã login đi qua
+/** * 3. PROTECTED ROUTE: Chỉ cho người ĐÃ Login
+ */
 const ProtectedRoute = () => {
-  const { user } = useContext(AuthContext);
-  // Nếu chưa login thì "đá" ra trang login ngay
-  if (!user) return <Navigate to="/login" replace />;
-  return <Outlet />;
+  const { user, loading } = useContext(AuthContext);
+  
+  if (loading) return <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center text-white">Đang tải dữ liệu...</div>;
+  
+  return user ? <Outlet /> : <Navigate to="/login" replace />;
+};
+
+/** * 4. PUBLIC ROUTE: Chỉ cho người CHƯA Login (Vào rồi không được quay lại trang Login nữa)
+ */
+const PublicRoute = () => {
+  const { user, loading } = useContext(AuthContext);
+  
+  if (loading) return null;
+  
+  // Nếu đã Login mà cố tình vào /login thì đẩy về trang chủ
+  return !user ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 function App() {
@@ -53,33 +64,41 @@ function App() {
       <Router>
         <Routes>
           
-          {/* A. NHÓM TRANG CÔNG KHAI (Có Header/Sidebar nhưng ai cũng xem được) */}
+          {/* A. NHÓM TRANG CÔNG KHAI: Ai cũng xem được */}
           <Route element={<AppLayout />}>
             <Route path="/" element={<Home />} />
-            {/* Thêm các trang như: /products, /about... ở đây */}
+            {/* Thêm: /products, /contact... ở đây */}
           </Route>
 
-          {/* B. NHÓM TRANG BẢO MẬT (Phải Login mới vào được) */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<AppLayout />}>
-               <Route path="/profile" element={
-                 <div className="p-10 bg-white/5 rounded-3xl border border-white/10">
-                   <h2 className="text-2xl font-bold">Hồ sơ cá nhân</h2>
-                   <p className="text-blue-400 mt-2 italic text-sm">Chỉ Demi mới nhìn thấy nội dung này!</p>
-                 </div>
-               } />
-               <Route path="/checkout" element={<div>Trang thanh toán của Demi</div>} />
+          {/* B. NHÓM TRANG AUTH: Chỉ dành cho khách chưa Login */}
+          <Route element={<PublicRoute />}>
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
             </Route>
           </Route>
 
-          {/* C. NHÓM TRANG AUTH (Biệt lập, không có Header/Sidebar) */}
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+          {/* C. NHÓM TRANG RIÊNG TƯ: Bắt buộc phải Login */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route path="/profile" element={
+                <div className="p-10 bg-white/5 rounded-3xl border border-white/10 text-center">
+                  <h2 className="text-2xl font-bold">Chào Demi! 👋</h2>
+                  <p className="text-blue-400 mt-2 italic text-sm">Trang hồ sơ cá nhân đã sẵn sàng.</p>
+                </div>
+              } />
+              <Route path="/checkout" element={<div>Trang thanh toán của Demi</div>} />
+            </Route>
           </Route>
 
-          {/* D. ĐIỀU HƯỚNG MẶC ĐỊNH */}
-          <Route path="*" element={<Navigate to="/" />} />
+          {/* D. XỬ LÝ TRANG LỖI 404: Tránh nhảy về Home gây bối rối */}
+          <Route path="*" element={
+            <div className="min-h-screen bg-[#0b0e14] flex flex-col items-center justify-center text-white">
+              <h1 className="text-6xl font-black text-blue-500">404</h1>
+              <p className="mt-4 text-gray-400">Trang này không tồn tại rồi Demi ơi!</p>
+              <a href="/" className="mt-6 px-6 py-2 bg-blue-600 rounded-full hover:bg-blue-700 transition">Về nhà thôi</a>
+            </div>
+          } />
           
         </Routes>
       </Router>
