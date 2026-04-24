@@ -11,7 +11,7 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
-
+import ForgotPassword from "./pages/Auth/ForgotPassword";
 /** * 1. LAYOUT CHÍNH (Có Header/Sidebar/Footer)
  */
 const AppLayout = () => (
@@ -75,6 +75,7 @@ function App() {
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
             </Route>
           </Route>
 

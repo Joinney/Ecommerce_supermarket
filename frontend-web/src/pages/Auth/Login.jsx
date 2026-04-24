@@ -114,7 +114,14 @@ export default function Login() {
                         <div className="space-y-1.5 relative text-left">
                             <div className="flex justify-between items-center px-1">
                                 <label className="text-[10px] xl:text-xs font-bold text-slate-700 uppercase tracking-widest">Password</label>
-                                <button type="button" className="text-[10px] font-bold text-[#006c49] hover:underline">Forgot Password?</button>
+                                
+                                {/* ĐÃ THAY THÀNH LINK QUA FORGOT PASSWORD */}
+                                <Link 
+                                    to="/forgot-password" 
+                                    className="text-[10px] font-bold text-[#006c49] hover:underline"
+                                >
+                                    Forgot Password?
+                                </Link>
                             </div>
                             <div className="relative group">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#006c49] z-10 transition-colors" size={18} />
@@ -183,7 +190,7 @@ export default function Login() {
                     padding-right: 1rem; 
                     padding-top: 0.8rem; 
                     padding-bottom: 0.8rem; 
-                    background-color: white; /* Đã chuyển sang màu trắng */
+                    background-color: white; 
                     border: 1px solid #e2e8f0; 
                     border-radius: 0.8rem; 
                     outline: none; 
