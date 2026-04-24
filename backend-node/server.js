@@ -13,22 +13,27 @@ const app = express();
 const PORT = process.env.PORT || 5000; 
 
 // 1. CẤU HÌNH CORS
+// Sửa lại danh sách cho phép (Thêm cả link có dấu / và không có dấu / cho chắc)
 const allowedOrigins = [
-    'http://localhost:5173', // Link của Vite local
-    'http://localhost:3000', // Link nếu bạn chạy build local
-    'https://ecommerce-supermarke-fe.onrender.com' // Link Frontend của Demi trên Render
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://ecommerce-supermarke-fe.onrender.com',
+    'https://ecommerce-supermarke-fe.onrender.com/' // Thêm bản có dấu xẹt cuối
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Cho phép các request không có origin (như Postman hoặc thiết bị di động)
+        // Nếu không có origin (như Postman hoặc khi server tự gọi mình) thì cho qua
         if (!origin) return callback(null, true);
         
-        if (allowedOrigins.indexOf(origin) === -1) {
-            const msg = 'CORS policy không cho phép truy cập từ origin này!';
-            return callback(new Error(msg), false);
+        // Kiểm tra xem origin có nằm trong danh sách không
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            // Log ra để Demi biết chính xác cái link đang bị chặn là gì
+            console.log("CORS bị chặn từ origin:", origin);
+            callback(new Error('CORS policy không cho phép truy cập từ origin này!'));
         }
-        return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
