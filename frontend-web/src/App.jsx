@@ -12,6 +12,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
+
 /** * 1. LAYOUT CHÍNH (Có Header/Sidebar/Footer)
  */
 const AppLayout = () => (
@@ -41,20 +42,15 @@ const AuthLayout = () => (
  */
 const ProtectedRoute = () => {
   const { user, loading } = useContext(AuthContext);
-  
   if (loading) return <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center text-white">Đang tải dữ liệu...</div>;
-  
   return user ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
-/** * 4. PUBLIC ROUTE: Chỉ cho người CHƯA Login (Vào rồi không được quay lại trang Login nữa)
+/** * 4. PUBLIC ROUTE: Chỉ cho người CHƯA Login
  */
 const PublicRoute = () => {
   const { user, loading } = useContext(AuthContext);
-  
   if (loading) return null;
-  
-  // Nếu đã Login mà cố tình vào /login thì đẩy về trang chủ
   return !user ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -67,10 +63,13 @@ function App() {
           {/* A. NHÓM TRANG CÔNG KHAI: Ai cũng xem được */}
           <Route element={<AppLayout />}>
             <Route path="/" element={<Home />} />
-            {/* Thêm: /products, /contact... ở đây */}
           </Route>
 
-          {/* B. NHÓM TRANG AUTH: Chỉ dành cho khách chưa Login */}
+          {/* B. TRANG XỬ LÝ GOOGLE CALLBACK: Đặt ở đây để tóm Token */}
+          {/* Demi lưu ý: Trang này không bọc trong PublicRoute để tránh bị redirect ngược lại khi đang xử lý */}
+       
+
+          {/* C. NHÓM TRANG AUTH: Chỉ dành cho khách chưa Login */}
           <Route element={<PublicRoute />}>
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<Login />} />
@@ -79,7 +78,7 @@ function App() {
             </Route>
           </Route>
 
-          {/* C. NHÓM TRANG RIÊNG TƯ: Bắt buộc phải Login */}
+          {/* D. NHÓM TRANG RIÊNG TƯ: Bắt buộc phải Login */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/profile" element={
@@ -92,7 +91,7 @@ function App() {
             </Route>
           </Route>
 
-          {/* D. XỬ LÝ TRANG LỖI 404: Tránh nhảy về Home gây bối rối */}
+          {/* E. XỬ LÝ TRANG LỖI 404 */}
           <Route path="*" element={
             <div className="min-h-screen bg-[#0b0e14] flex flex-col items-center justify-center text-white">
               <h1 className="text-6xl font-black text-blue-500">404</h1>

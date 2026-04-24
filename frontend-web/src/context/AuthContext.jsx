@@ -5,72 +5,85 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    // loading này dùng để đợi React kiểm tra LocalStorage xong mới cho Render Router
     const [loading, setLoading] = useState(true); 
-    // authActionLoading dùng để hiện loading khi đang bấm nút Login/Register
     const [authActionLoading, setAuthActionLoading] = useState(false);
 
-    // KIỂM TRA TRẠNG THÁI ĐĂNG NHẬP KHI MỞ APP/F5
     useEffect(() => {
         const checkAuth = () => {
-            const savedUser = localStorage.getItem("user");
-            const token = localStorage.getItem("accessToken");
+            // 1. "Bẫy" dữ liệu Google từ URL (?token=...&user=...)
+            const params = new URLSearchParams(window.location.search);
+            const tokenFromUrl = params.get("token");
+            const userFromUrl = params.get("user");
 
-            if (savedUser && token) {
+            if (tokenFromUrl && userFromUrl) {
                 try {
-                    setUser(JSON.parse(savedUser));
+                    const userData = JSON.parse(decodeURIComponent(userFromUrl));
+                    
+                    // Lưu ngay vào kho
+                    localStorage.setItem("accessToken", tokenFromUrl);
+                    localStorage.setItem("user", JSON.stringify(userData));
+                    
+                    // Set state để Header hiện tên luôn
+                    setUser(userData);
+
+                    // Gọt sạch URL để thanh địa chỉ đẹp lại (localhost:5173/)
+                    window.history.replaceState({}, document.title, window.location.pathname);
                 } catch (e) {
-                    localStorage.removeItem("user");
+                    console.error("❌ Lỗi xử lý dữ liệu Google từ URL:", e);
                 }
             } else {
-                setUser(null);
+                // 2. Nếu không có trên URL thì mới kiểm tra kho LocalStorage cũ
+                const savedUser = localStorage.getItem("user");
+                const token = localStorage.getItem("accessToken");
+
+                if (savedUser && token) {
+                    try {
+                        setUser(JSON.parse(savedUser));
+                    } catch (e) {
+                        localStorage.removeItem("user");
+                        localStorage.removeItem("accessToken");
+                    }
+                }
             }
-            // Quan trọng nhất: Báo cho App biết đã check xong, có thể đứng yên tại trang hiện tại
+            
+            // 3. CHỐT HẠ: Tắt loading để hiện giao diện (Hết đen màn hình)
             setLoading(false); 
         };
 
         checkAuth();
     }, []);
 
-    // 1. Logic Đăng nhập
+    // Logic Đăng nhập thường
     const login = async (username, password) => {
         setAuthActionLoading(true);
         try {
             const res = await api.post("/auth/signin", { username, password });
             const { user: userData, accessToken } = res.data;
-
             setUser(userData);
             localStorage.setItem("accessToken", accessToken);
             localStorage.setItem("user", JSON.stringify(userData));
-            
             return { success: true };
         } catch (error) {
-            return { 
-                success: false, 
-                message: error.response?.data?.message || "Sai tài khoản hoặc mật khẩu!" 
-            };
+            return { success: false, message: error.response?.data?.message || "Lỗi đăng nhập!" };
         } finally {
             setAuthActionLoading(false);
         }
     };
 
-    // 2. Logic Đăng ký
+    // Logic Đăng ký
     const register = async (userData) => {
         setAuthActionLoading(true);
         try {
             const res = await api.post("/auth/signup", userData);
             return { success: true, message: res.data.message };
         } catch (error) {
-            return { 
-                success: false, 
-                message: error.response?.data?.message || "Đăng ký thất bại!" 
-            };
+            return { success: false, message: error.response?.data?.message || "Lỗi đăng ký!" };
         } finally {
             setAuthActionLoading(false);
         }
     };
 
-    // 3. Logic Đăng xuất
+    // Logic Đăng xuất
     const logout = async () => {
         try {
             await api.post("/auth/logout");
@@ -80,7 +93,6 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
             localStorage.removeItem("user");
             localStorage.removeItem("accessToken");
-            // Điều hướng về login
             window.location.href = "/login";
         }
     };
@@ -88,11 +100,12 @@ export const AuthProvider = ({ children }) => {
     return (
         <AuthContext.Provider value={{ 
             user, 
+            setUser,
             login, 
             logout, 
             register, 
-            loading, // Dùng để chặn Route khi đang F5
-            authActionLoading // Dùng để hiện icon loading ở nút bấm
+            loading, 
+            authActionLoading 
         }}>
             {children}
         </AuthContext.Provider>

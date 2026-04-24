@@ -31,6 +31,13 @@ export default function Login() {
         setLoading(false);
     };
 
+    // HÀM XỬ LÝ GOOGLE LOGIN ĐỒNG BỘ
+    const handleGoogleLogin = () => {
+        // Lấy Base URL từ biến môi trường, mặc định là localhost nếu chưa cấu hình
+        const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        window.location.href = `${apiBaseUrl}/api/auth/google`;
+    };
+
     return (
         <div className="fixed inset-0 h-screen w-screen flex bg-white overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] z-[9999]">
             
@@ -114,8 +121,6 @@ export default function Login() {
                         <div className="space-y-1.5 relative text-left">
                             <div className="flex justify-between items-center px-1">
                                 <label className="text-[10px] xl:text-xs font-bold text-slate-700 uppercase tracking-widest">Password</label>
-                                
-                                {/* ĐÃ THAY THÀNH LINK QUA FORGOT PASSWORD */}
                                 <Link 
                                     to="/forgot-password" 
                                     className="text-[10px] font-bold text-[#006c49] hover:underline"
@@ -163,7 +168,12 @@ export default function Login() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <button className="flex items-center justify-center gap-3 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-bold text-slate-700 text-xs">
+                        {/* NÚT GOOGLE ĐÃ CẬP NHẬT */}
+                        <button 
+                            type="button"
+                            onClick={handleGoogleLogin}
+                            className="flex items-center justify-center gap-3 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-bold text-slate-700 text-xs"
+                        >
                             <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-4 h-4" alt="G" /> Google
                         </button>
                         <button className="flex items-center justify-center gap-3 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-bold text-slate-700 text-xs">
