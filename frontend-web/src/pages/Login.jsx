@@ -1,101 +1,203 @@
 import { useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle2 } from "lucide-react";
 
 export default function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(""); // Thêm state để hiện lỗi ngay trên form
-    
+    const [error, setError] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
 
+    const stats = [
+        { value: "15k+", label: "Happy Clients" },
+        { value: "30m", label: "Fast Delivery" },
+    ];
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(""); // Xóa lỗi cũ trước khi thử lại
+        setError("");
         setLoading(true);
-        
         const result = await login(username, password);
-        
         if (result.success) {
-            // Nhờ cấu trúc Nested Layout ở App.jsx, navigate("/") sẽ tự động 
-            // kích hoạt AppLayout và hiện lại Header/Sidebar mà không cần load lại trang.
-            navigate("/"); 
+            navigate("/");
         } else {
-            setError(result.message); // Hiển thị lỗi trực tiếp lên giao diện
+            setError(result.message);
         }
         setLoading(false);
     };
 
     return (
-        <div className="w-full max-w-md animate-fadeIn">
-            <form onSubmit={handleSubmit} className="p-10 bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl">
-                <div className="mb-10 text-center">
-                    <h2 className="text-3xl font-black text-blue-500 tracking-tighter">DEMI LOGIN</h2>
-                    <p className="text-gray-400 text-sm mt-2">Chào mừng Demi quay trở lại!</p>
-                </div>
-                
-                {/* Hiển thị lỗi nếu có */}
-                {error && (
-                    <div className="mb-6 p-3 bg-red-500/20 border border-red-500/30 text-red-400 text-sm rounded-xl text-center">
-                        {error}
-                    </div>
-                )}
-                
-                <div className="space-y-4">
-                    <div className="group">
-                        <label className="text-xs text-gray-500 ml-4 mb-1 block">Username</label>
-                        <input 
-                            type="text" 
-                            placeholder="Nhập tài khoản..." 
-                            required
-                            className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 focus:bg-white/10 text-white transition-all shadow-inner"
-                            onChange={(e) => setUsername(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="group">
-                        <label className="text-xs text-gray-500 ml-4 mb-1 block">Password</label>
-                        <input 
-                            type="password" 
-                            placeholder="••••••••" 
-                            required
-                            className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 focus:bg-white/10 text-white transition-all shadow-inner"
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <button 
-                    disabled={loading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-2xl font-bold mt-8 transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/30"
-                >
-                    {loading ? (
-                        <span className="flex items-center justify-center gap-2">
-                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            ĐANG XÁC THỰC...
-                        </span>
-                    ) : "ĐĂNG NHẬP NGAY"}
-                </button>
-                
-                <p className="text-center mt-8 text-sm text-gray-400">
-                    Chưa có tài khoản?{" "}
-                    <Link to="/signup" className="text-blue-400 font-semibold hover:underline transition-all">
-                        Tạo tài khoản mới
-                    </Link>
-                </p>
-            </form>
+        /* fixed inset-0: Tràn màn hình, xóa viền đen body */
+        <div className="fixed inset-0 h-screen w-screen flex bg-white overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] z-[9999]">
             
-            {/* Link quay về trang chủ cho khách */}
-            <p className="text-center mt-6">
-                <Link to="/" className="text-gray-500 text-sm hover:text-white transition-colors">
-                    ← Quay lại trang chủ xem hàng
-                </Link>
-            </p>
+            {/* TRÁI: HERO SECTION - Đồng bộ 100% với Signup (Nền rau củ + Stats bên dưới) */}
+            <section className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 xl:p-16 text-white border-none shrink-0 overflow-hidden">
+                <div className="absolute inset-0 z-0">
+                    <img 
+                        src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=2000" 
+                        className="w-full h-full object-cover" 
+                        alt="Fresh" 
+                    />
+                    <div className="absolute inset-0 bg-[#006c49]/80 mix-blend-multiply"></div>
+                </div>
+
+                <div className="relative z-10 space-y-6 max-w-xl">
+                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-[#006c49] shadow-xl">
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
+                            <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8.13,20C11,20 13.85,18.08 15,15.27C16.15,18.08 19,20 21.87,20C22.36,20 22.86,19.87 23.34,19.7L24.29,22L26.18,21.34C24.1,16.17 22,10 13,8L15,3L13,2L11,7L13,8M8.13,18C7,18 6,17.43 5.4,16.43C5.94,15.05 6.5,13.62 7.07,12.18C8.28,12.04 9.14,12.56 9.61,13.72C10.08,14.89 9.87,16.22 8.13,18M21.87,18C20.13,16.22 19.92,14.89 20.39,13.72C20.86,12.56 21.72,12.04 22.93,12.18C23.5,13.62 24.06,15.05 24.6,16.43C24,17.43 23,18 21.87,18Z"/>
+                        </svg>
+                    </div>
+                    <h1 className="text-5xl xl:text-7xl font-black leading-[1.1] tracking-tighter">
+                        Freshness <br /> 
+                        <span className="text-white/90">delivered.</span>
+                    </h1>
+                    <p className="text-sm xl:text-lg opacity-90 leading-relaxed font-medium max-w-md">
+                        Join thousands of happy shoppers who choose FreshCart for their daily premium groceries.
+                    </p>
+                </div>
+
+                {/* Stats đồng bộ vị trí với Signup */}
+                <div className="relative z-10 flex gap-4 w-full max-w-sm">
+                    {stats.map((item, index) => (
+                        <div key={index} className="bg-white/10 backdrop-blur-md border border-white/20 p-4 xl:p-5 rounded-2xl flex-1 text-center">
+                            <div className="text-xl xl:text-3xl font-bold">{item.value}</div>
+                            <div className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-1">{item.label}</div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* PHẢI: LOGIN FORM - Kích thước max-w đồng bộ tuyệt đối với Signup */}
+            <section className="w-full lg:w-1/2 h-full flex flex-col items-center justify-center p-6 xl:p-20 bg-white shrink-0 overflow-hidden">
+                <div className="w-full max-w-[400px] xl:max-w-[480px] space-y-8 animate-fadeIn">
+                    <header className="space-y-1 text-left">
+                        <h2 className="text-3xl xl:text-5xl font-black text-slate-900 tracking-tight leading-none uppercase">Welcome back</h2>
+                        <p className="text-slate-500 font-medium text-xs xl:text-sm">Sign in to access your fresh groceries</p>
+                    </header>
+
+                    {error && (
+                        <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-xs font-bold text-center animate-pulse">
+                            ⚠️ {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Email Input Group - Label in hoa giống Signup */}
+                        <div className="space-y-1.5 relative text-left">
+                            <label className="text-[10px] xl:text-xs font-bold text-slate-700 uppercase tracking-widest ml-1">Email Address</label>
+                            <div className="relative group">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#006c49] z-10 transition-colors" size={18} />
+                                <input 
+                                    type="text" 
+                                    placeholder="name@company.com" 
+                                    className="demi-input" 
+                                    value={username} 
+                                    onChange={(e) => setUsername(e.target.value)} 
+                                    required 
+                                />
+                            </div>
+                        </div>
+
+                        {/* Password Input Group */}
+                        <div className="space-y-1.5 relative text-left">
+                            <div className="flex justify-between items-center px-1">
+                                <label className="text-[10px] xl:text-xs font-bold text-slate-700 uppercase tracking-widest">Password</label>
+                                <button type="button" className="text-[10px] font-bold text-[#006c49] hover:underline">Forgot Password?</button>
+                            </div>
+                            <div className="relative group">
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#006c49] z-10 transition-colors" size={18} />
+                                <input 
+                                    type={showPassword ? "text" : "password"} 
+                                    placeholder="••••••••" 
+                                    className="demi-input pr-12" 
+                                    value={password} 
+                                    onChange={(e) => setPassword(e.target.value)} 
+                                    required 
+                                />
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <label className="flex items-center gap-2 cursor-pointer w-fit group">
+                            <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-[#006c49] focus:ring-[#006c49]" />
+                            <span className="text-slate-500 text-xs font-medium group-hover:text-slate-700 transition-colors">Remember Me</span>
+                        </label>
+
+                        <button 
+                            disabled={loading} 
+                            className="w-full bg-[#006c49] hover:bg-[#004d34] text-white py-3.5 xl:py-4.5 rounded-xl font-black text-sm xl:text-lg shadow-lg active:scale-[0.98] transition-all uppercase flex items-center justify-center gap-2"
+                        >
+                            {loading ? "..." : <>Sign In <ArrowRight size={20} /></>}
+                        </button>
+                    </form>
+
+                    <div className="relative flex items-center py-2">
+                        <div className="flex-grow border-t border-slate-100"></div>
+                        <span className="mx-4 text-[10px] font-bold text-slate-300 tracking-widest uppercase">Or continue with</span>
+                        <div className="flex-grow border-t border-slate-100"></div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <button className="flex items-center justify-center gap-3 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-bold text-slate-700 text-xs">
+                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-4 h-4" alt="G" /> Google
+                        </button>
+                        <button className="flex items-center justify-center gap-3 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-bold text-slate-700 text-xs">
+                            <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" className="w-4 h-4" alt="F" /> Facebook
+                        </button>
+                    </div>
+
+                    <p className="text-center text-xs xl:text-sm text-slate-400 font-medium pt-2">
+                        Don't have an account? <Link to="/signup" className="text-[#006c49] font-black hover:underline">Create Account</Link>
+                    </p>
+                </div>
+            </section>
+
+            {/* Badge "Best Prices" */}
+            <div className="fixed bottom-6 right-6 z-[10000] bg-[#fea619] text-[#684000] px-4 py-2 rounded-full shadow-lg flex items-center gap-2 cursor-default transition-all hover:scale-105">
+                <CheckCircle2 size={16} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Best Prices Guaranteed</span>
+            </div>
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                .demi-input { 
+                    width: 100%; 
+                    padding-left: 3rem; 
+                    padding-right: 1rem; 
+                    padding-top: 0.8rem; 
+                    padding-bottom: 0.8rem; 
+                    background-color: #f8f9ff; 
+                    border: 1px solid #e2e8f0; 
+                    border-radius: 0.8rem; 
+                    outline: none; 
+                    transition: all 0.3s; 
+                    font-size: 0.875rem; 
+                    color: #0f172a;
+                }
+                .demi-input::placeholder { color: #94a3b8; opacity: 1; }
+                .demi-input:focus { border-color: #006c49; background-color: white; box-shadow: 0 0 0 4px rgba(0, 108, 73, 0.05); }
+                @media (min-width: 1280px) { 
+                    .demi-input { 
+                        padding-top: 1.1rem; 
+                        padding-bottom: 1.1rem; 
+                        font-size: 1rem; 
+                        padding-left: 3.5rem; 
+                        border-radius: 1rem; 
+                    } 
+                }
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                .animate-fadeIn { animation: fadeIn 0.8s ease-in-out forwards; }
+            `}} />
         </div>
     );
 }
