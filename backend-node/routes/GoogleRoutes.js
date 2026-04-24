@@ -11,7 +11,7 @@ router.get('/google', passport.authenticate('google', {
 }));
 
 // Cổng 2: Xử lý dữ liệu trả về
-router.get('/google/callback', 
+router.get('/google/callback/', 
     passport.authenticate('google', { failureRedirect: '/login', session: true }),
     (req, res) => {
         try {
