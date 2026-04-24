@@ -9,8 +9,8 @@ import Footer from "./components/Footer";
 
 // Pages
 import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+import Login from "./pages/Auth/Login";
+import Signup from "./pages/Auth/Signup";
 
 /** * 1. LAYOUT CHÍNH (Có Header/Sidebar/Footer)
  */

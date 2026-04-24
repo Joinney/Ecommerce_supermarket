@@ -1,7 +1,7 @@
 import { useState, useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle2, ArrowLeft } from "lucide-react";
 
 export default function Login() {
     const [username, setUsername] = useState("");
@@ -32,10 +32,9 @@ export default function Login() {
     };
 
     return (
-        /* fixed inset-0: Tràn màn hình, xóa viền đen body */
         <div className="fixed inset-0 h-screen w-screen flex bg-white overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] z-[9999]">
             
-            {/* TRÁI: HERO SECTION - Đồng bộ 100% với Signup (Nền rau củ + Stats bên dưới) */}
+            {/* TRÁI: HERO SECTION */}
             <section className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 xl:p-16 text-white border-none shrink-0 overflow-hidden">
                 <div className="absolute inset-0 z-0">
                     <img 
@@ -61,7 +60,6 @@ export default function Login() {
                     </p>
                 </div>
 
-                {/* Stats đồng bộ vị trí với Signup */}
                 <div className="relative z-10 flex gap-4 w-full max-w-sm">
                     {stats.map((item, index) => (
                         <div key={index} className="bg-white/10 backdrop-blur-md border border-white/20 p-4 xl:p-5 rounded-2xl flex-1 text-center">
@@ -72,8 +70,19 @@ export default function Login() {
                 </div>
             </section>
 
-            {/* PHẢI: LOGIN FORM - Kích thước max-w đồng bộ tuyệt đối với Signup */}
-            <section className="w-full lg:w-1/2 h-full flex flex-col items-center justify-center p-6 xl:p-20 bg-white shrink-0 overflow-hidden">
+            {/* PHẢI: LOGIN FORM */}
+            <section className="w-full lg:w-1/2 h-full flex flex-col items-center justify-center p-6 xl:p-20 bg-white shrink-0 overflow-hidden relative">
+                
+                <Link 
+                    to="/" 
+                    className="absolute top-8 left-8 flex items-center gap-2 text-slate-400 hover:text-[#006c49] transition-all group font-bold text-[10px] uppercase tracking-widest"
+                >
+                    <div className="p-2 rounded-lg bg-slate-50 group-hover:bg-[#006c49]/10 transition-colors">
+                        <ArrowLeft size={16} />
+                    </div>
+                    <span>Home</span>
+                </Link>
+
                 <div className="w-full max-w-[400px] xl:max-w-[480px] space-y-8 animate-fadeIn">
                     <header className="space-y-1 text-left">
                         <h2 className="text-3xl xl:text-5xl font-black text-slate-900 tracking-tight leading-none uppercase">Welcome back</h2>
@@ -87,7 +96,6 @@ export default function Login() {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Email Input Group - Label in hoa giống Signup */}
                         <div className="space-y-1.5 relative text-left">
                             <label className="text-[10px] xl:text-xs font-bold text-slate-700 uppercase tracking-widest ml-1">Email Address</label>
                             <div className="relative group">
@@ -103,7 +111,6 @@ export default function Login() {
                             </div>
                         </div>
 
-                        {/* Password Input Group */}
                         <div className="space-y-1.5 relative text-left">
                             <div className="flex justify-between items-center px-1">
                                 <label className="text-[10px] xl:text-xs font-bold text-slate-700 uppercase tracking-widest">Password</label>
@@ -176,7 +183,7 @@ export default function Login() {
                     padding-right: 1rem; 
                     padding-top: 0.8rem; 
                     padding-bottom: 0.8rem; 
-                    background-color: #f8f9ff; 
+                    background-color: white; /* Đã chuyển sang màu trắng */
                     border: 1px solid #e2e8f0; 
                     border-radius: 0.8rem; 
                     outline: none; 
@@ -185,7 +192,10 @@ export default function Login() {
                     color: #0f172a;
                 }
                 .demi-input::placeholder { color: #94a3b8; opacity: 1; }
-                .demi-input:focus { border-color: #006c49; background-color: white; box-shadow: 0 0 0 4px rgba(0, 108, 73, 0.05); }
+                .demi-input:focus { 
+                    border-color: #006c49; 
+                    box-shadow: 0 0 0 4px rgba(0, 108, 73, 0.05); 
+                }
                 @media (min-width: 1280px) { 
                     .demi-input { 
                         padding-top: 1.1rem; 
