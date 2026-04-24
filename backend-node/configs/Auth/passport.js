@@ -7,7 +7,7 @@ passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     // FIX: Linh động giữa Local và Render. Nếu không có biến môi trường thì dùng localhost
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/auth/google/callback",
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || "https://ecommerce-supermarket-k691.onrender.com/api/auth/google/callback",
     // CỰC KỲ QUAN TRỌNG: Phải có proxy: true để chạy được trên Render (HTTPS)
     proxy: true 
 }, async (accessToken, refreshToken, profile, done) => {
