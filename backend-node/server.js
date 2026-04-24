@@ -1,10 +1,11 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import authRoutes from './routes/authRoutes.js';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import authRoutes from "./routes/Auth/authRoutes.js"; 
+import forgotRoutes from "./routes/Auth/ForgotRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +47,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // 4. CÁC ROUTE API
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', forgotRoutes);
 
 // 5. XỬ LÝ SPA (CÁCH MỚI KHÔNG BỊ LỖI PATH-TO-REGEXP)
 app.use((req, res, next) => {

@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import pool from '../configs/database.js';
+import pool from '../../configs/database.js';
 
 // --- ĐĂNG KÝ (SIGNUP) ---
 export const signup = async (req, res) => {

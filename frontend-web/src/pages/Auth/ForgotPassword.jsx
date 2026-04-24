@@ -1,16 +1,13 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, ShieldCheck, KeyRound, ArrowRight, ArrowLeft, CheckCircle2, RefreshCcw } from "lucide-react";
-import api from "../../api/axios"; // Đã sửa đường dẫn thành ../../ để tránh lỗi import
+import api from "../../api/axios";
 
 export default function ForgotPassword() {
     const navigate = useNavigate();
-    
-    // Quản lý các bước: 'email' -> 'otp' -> 'reset' -> 'success'
     const [step, setStep] = useState('email'); 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -26,7 +23,8 @@ export default function ForgotPassword() {
         setError("");
         setLoading(true);
         try {
-            await api.post("/auth/forgot-password", { email });
+            // Trim email để tránh lỗi khoảng trắng đầu/cuối
+            await api.post("/auth/forgot-password", { email: email.trim() });
             setStep('otp');
         } catch (err) {
             setError(err.response?.data?.message || "Email không tồn tại!");
@@ -39,11 +37,19 @@ export default function ForgotPassword() {
         e.preventDefault();
         setError("");
         setLoading(true);
+        
+        // Loại bỏ khoảng trắng trong mã OTP trước khi gửi
+        const cleanOtp = otp.trim();
+        console.log("Đang verify mã:", cleanOtp); // Demi check trong F12 xem mã có bị thừa gì không
+
         try {
-            await api.post("/auth/verify-otp", { email, otp });
+            await api.post("/auth/verify-otp", { 
+                email: email.trim(), 
+                otp: cleanOtp 
+            });
             setStep('reset');
         } catch (err) {
-            setError("Mã OTP không chính xác!");
+            setError(err.response?.data?.message || "Mã OTP không chính xác hoặc hết hạn!");
         } finally {
             setLoading(false);
         }
@@ -54,11 +60,15 @@ export default function ForgotPassword() {
         if (newPassword !== confirmPassword) return setError("Mật khẩu không khớp!");
         setLoading(true);
         try {
-            await api.post("/auth/reset-password", { email, otp, newPassword });
+            await api.post("/auth/reset-password", { 
+                email: email.trim(), 
+                otp: otp.trim(), 
+                newPassword 
+            });
             setStep('success');
             setTimeout(() => navigate("/login"), 3000);
         } catch (err) {
-            setError("Lỗi đặt lại mật khẩu!");
+            setError(err.response?.data?.message || "Lỗi đặt lại mật khẩu!");
         } finally {
             setLoading(false);
         }
@@ -67,7 +77,7 @@ export default function ForgotPassword() {
     return (
         <div className="fixed inset-0 h-screen w-screen flex bg-white overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] z-[9999]">
             
-            {/* TRÁI: HERO SECTION - Đồng bộ 100% với Login */}
+            {/* TRÁI: HERO SECTION */}
             <section className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 xl:p-16 text-white border-none shrink-0 overflow-hidden">
                 <div className="absolute inset-0 z-0">
                     <img 
@@ -157,7 +167,16 @@ export default function ForgotPassword() {
                                 <label className="text-[10px] xl:text-xs font-bold text-slate-700 uppercase tracking-widest ml-1">Enter 6-Digit OTP</label>
                                 <div className="relative group">
                                     <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#006c49] z-10 transition-colors" size={18} />
-                                    <input type="text" maxLength="6" placeholder="000000" className="demi-input tracking-[1em] text-center font-black" value={otp} onChange={(e) => setOtp(e.target.value)} required />
+                                    <input 
+                                        type="text" 
+                                        maxLength="6" 
+                                        placeholder="000000" 
+                                        autoComplete="one-time-code"
+                                        className="demi-input tracking-[1em] text-center font-black" 
+                                        value={otp} 
+                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} // Chỉ cho phép nhập số
+                                        required 
+                                    />
                                 </div>
                             </div>
                             <button disabled={loading} className="w-full bg-[#006c49] hover:bg-[#004d34] text-white py-3.5 xl:py-4.5 rounded-xl font-black text-sm xl:text-lg shadow-lg uppercase">
@@ -202,7 +221,6 @@ export default function ForgotPassword() {
                 </div>
             </section>
 
-            {/* CSS đồng bộ */}
             <style dangerouslySetInnerHTML={{ __html: `
                 .demi-input { 
                     width: 100%; 
