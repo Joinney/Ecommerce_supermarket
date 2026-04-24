@@ -1,6 +1,6 @@
 // routes/Auth/ForgotRoutes.js
 import express from "express";
-import { forgotPassword, verifyOTP, resetPassword } from "../../controllers/Auth/ForgotController.js";
+import { forgotPassword, verifyOTP, resetPassword } from "../../controllers/Auth/forgotController.js";
 
 const router = express.Router();
 
