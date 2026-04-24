@@ -42,7 +42,7 @@ app.use(cookieParser());
 app.set('trust proxy', 1); 
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'demi_mart_secret_key_123',
+    secret: process.env.SESSION_SECRET || 'secret',
     resave: false,
     saveUninitialized: false, // Để false để tránh tạo session trống liên tục
     proxy: true, // Cho phép session đi qua proxy (Render/Cloudflare)

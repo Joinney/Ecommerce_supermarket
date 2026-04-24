@@ -6,9 +6,8 @@ import pool from '../database.js';
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    // FIX: Linh động giữa Local và Render. Nếu không có biến môi trường thì dùng localhost
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/auth/google/callback",
-    // CỰC KỲ QUAN TRỌNG: Phải có proxy: true để chạy được trên Render (HTTPS)
+    // Sửa link mặc định có dấu / ở cuối để khớp với Log của Render
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/auth/google/callback/",
     proxy: true 
 }, async (accessToken, refreshToken, profile, done) => {
     try {
@@ -21,63 +20,47 @@ passport.use(new GoogleStrategy({
         let user = userResult.rows[0];
         
         if (!user) {
-            // 2. Nếu chưa có -> Tạo mới 
+            // 2. FIX QUAN TRỌNG: Đổi 'username' thành 'full_name' để khớp với Database của Demi
             console.log("==> [Google Auth] Tạo mới user:", email);
             const newUser = await pool.query(
-                'INSERT INTO users (email, username, avatar_url, role, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+                'INSERT INTO users (email, full_name, avatar_url, role, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
                 [email, displayName, avatar, 'Buyer', 'active']
             );
             user = newUser.rows[0];
         }
 
-        // 3. KIỂM TRA TRẠNG THÁI (STATUS)
-        // Demi có thể vào DB đổi status thành 'inactive' hoặc 'banned' để test chặn login
+        // 3. Kiểm tra trạng thái tài khoản
         if (user.status !== 'active') {
-            console.warn(`⚠️ [Google Auth] Tài khoản ${email} bị từ chối do status: ${user.status}`);
-            return done(null, false, { message: 'Tài khoản của bạn đã bị ngừng hoạt động.' });
+            console.warn(`⚠️ [Google Auth] Chặn đăng nhập: ${email} (status: ${user.status})`);
+            return done(null, false, { message: 'Tài khoản của bạn đã bị khóa.' });
         }
 
-        // 4. CẬP NHẬT NGÀY ĐĂNG NHẬP GẦN NHẤT (last_login)
+        // 4. Cập nhật ngày đăng nhập gần nhất (Dùng đúng cột last_login trong ảnh DB của Demi)
         await pool.query(
             'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = $1',
             [user.user_id]
         );
 
-        console.log(`==> ✅ [Google Auth] ${email} login thành công.`);
+        console.log(`==> ✅ [Google Auth] Chào mừng ${user.full_name} (${email})`);
         return done(null, user);
 
     } catch (err) {
-        console.error('❌ Lỗi tại Google Strategy:', err.message);
+        console.error('❌ Lỗi 500 tại Passport Strategy:', err.message);
         return done(err, null);
     }
 }));
 
 /**
- * PHẦN XỬ LÝ SESSION - ĐÃ FIX THEO CỘT user_id
+ * XỬ LÝ SESSION
  */
-
-// 1. Serialize: Lưu user_id vào session
 passport.serializeUser((user, done) => {
-    const idToStore = user.user_id; 
-
-    if (!idToStore) {
-        console.error("❌ LỖI: Object User không có user_id!", user);
-        return done(new Error("Failed to serialize: user_id not found"), null);
-    }
-
-    done(null, idToStore);
+    done(null, user.user_id);
 });
 
-// 2. Deserialize: Tìm user dựa trên user_id từ session
 passport.deserializeUser(async (id, done) => {
     try {
         const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [id]);
-        
-        if (result.rows.length === 0) {
-            return done(null, false);
-        }
-        
-        done(null, result.rows[0]);
+        done(null, result.rows[0] || false);
     } catch (err) {
         console.error("❌ Lỗi DeserializeUser:", err);
         done(err, null);
