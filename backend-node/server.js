@@ -20,18 +20,12 @@ const allowedOrigins = [
     'https://ecommerce-supermarke-fe.onrender.com/' // Thêm cả bản có gạch chéo
 ];
 
+// 1. CẤU HÌNH CORS (Bản fix mạnh tay cho Demi)
 app.use(cors({
-    origin: (origin, callback) => {
-        // Cho phép các request không có origin (như Postman hoặc thiết bị di động)
-        if (!origin) return callback(null, true);
-
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            // DÒNG NÀY CỰC QUAN TRỌNG: Nó sẽ in ra link đang bị lỗi trong Logs Render
-            console.error(`=> CORS chặn Origin: "${origin}"`); 
-            callback(new Error('CORS policy không cho phép truy cập từ origin này!'));
-        }
+    origin: function (origin, callback) {
+        // Cho phép tất cả các origin gọi đến server này
+        // (Vừa giúp chạy được Render, vừa giúp Demi dev local không bị lỗi)
+        return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
