@@ -1,46 +1,148 @@
-import { useContext } from "react";
+import React, { useContext, useState, useRef, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import Logo from "../assets/Demi Mart.png";
+import { Globe, ChevronDown, Check, Search, LogOut, MapPin } from "lucide-react";
 
 export default function Header() {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [isLangOpen, setIsLangOpen] = useState(false);
+  const langRef = useRef(null);
+
+  const languages = [
+    { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'zh', name: '中文', flag: '🇨🇳' },
+  ];
+
+  const [currentLang, setCurrentLang] = useState(() => {
+    const saved = localStorage.getItem('demi_mart_lang');
+    if (saved === 'en') return languages[1];
+    if (saved === 'zh-CN') return languages[2];
+    return languages[0];
+  });
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (langRef.current && !langRef.current.contains(event.target)) {
+        setIsLangOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Hàm xử lý Logout triệt để để tránh lỗi màn hình đen
+  const handleLogout = () => {
+    logout(); // Gọi hàm logout từ Context
+    localStorage.removeItem('token'); // Xóa token thủ công cho chắc chắn
+    window.location.href = "/"; // Ép trình duyệt load lại hoàn toàn trang chủ
+  };
+
+  const isAuthPage = ["/login", "/signup", "/forgot-password"].includes(location.pathname);
 
   return (
-    <header className="h-20 bg-[#161b22]/80 backdrop-blur-xl border-b border-white/10 fixed top-0 w-full z-50 px-4 md:px-10 flex items-center justify-between">
-      {/* Logo */}
-      <Link to="/" className="text-2xl font-black tracking-tighter text-blue-500">
-        DEMI<span className="text-white font-light">WEEE</span>
-      </Link>
-
-      {/* Search Bar - Giống mẫu Weee! */}
-      <div className="hidden md:flex flex-1 max-w-2xl mx-10">
-        <div className="relative w-full">
-          <input 
-            type="text" 
-            placeholder="Tìm kiếm sản phẩm cực tươi tại Demi Mart..." 
-            className="w-full bg-white/5 border border-white/10 py-2.5 px-5 rounded-full outline-none focus:border-blue-500 focus:bg-white/10 transition text-sm"
+    <header className="h-20 bg-white/95 backdrop-blur-md border-b border-slate-100 fixed top-0 w-full z-[10000] px-4 md:px-10 flex items-center justify-between shadow-sm font-sans transition-all">
+      
+      <div className="flex items-center gap-8 flex-1">
+        {/* LOGO */}
+        <Link to="/" className="flex items-center flex-shrink-0 hover:scale-105 transition-all duration-300">
+          <img 
+            src={Logo} 
+            alt="Demi Mart" 
+            className="h-8 md:h-9 w-auto object-contain drop-shadow-sm" 
           />
-          <button className="absolute right-4 top-2 text-gray-400">🔍</button>
-        </div>
+        </Link>
+
+        {/* SEARCH BAR */}
+        {!isAuthPage && (
+          <div className="hidden md:flex flex-1 max-w-xl relative group">
+            <Search 
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#006c49] transition-colors z-10" 
+              size={18} 
+            />
+            <input 
+              type="text" 
+              placeholder="Tìm sản phẩm tại Demi Mart..." 
+              className="w-full bg-[#f8fafc] border border-transparent py-3 pl-12 pr-6 rounded-2xl outline-none focus:bg-white focus:border-[#006c49] focus:ring-4 focus:ring-[#006c49]/5 transition-all text-sm font-semibold text-slate-700 placeholder:text-slate-400 shadow-sm"
+            />
+          </div>
+        )}
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-6">
-        <div className="hidden sm:block text-right">
-          <p className="text-xs text-gray-400">Giao hàng tại</p>
-          <p className="text-sm font-bold text-blue-400">TP. Hồ Chí Minh 📍</p>
+      <div className="flex items-center gap-4 md:gap-7 ml-4">
+        {/* ĐỔI NGÔN NGỮ */}
+        <div className="relative" ref={langRef}>
+          <button 
+            onClick={() => setIsLangOpen(!isLangOpen)}
+            className="flex items-center gap-2.5 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 transition-all active:scale-95 group shadow-sm"
+          >
+            <Globe size={18} className="text-slate-500 group-hover:text-[#006c49] transition-colors" />
+            <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest hidden sm:block">
+              {currentLang.code}
+            </span>
+            <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isLangOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isLangOpen && (
+            <div className="absolute right-0 mt-3 w-52 bg-white border border-slate-100 rounded-2xl shadow-2xl p-2 animate-fadeIn border-t-4 border-t-[#006c49]">
+              <p className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Chọn ngôn ngữ</p>
+              {languages.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => {
+                    const codeMap = { vi: 'vi', en: 'en', zh: 'zh-CN' };
+                    if (window.changeLanguageAuto) window.changeLanguageAuto(codeMap[lang.code]);
+                    setCurrentLang(lang);
+                    setIsLangOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                    currentLang.code === lang.code 
+                    ? 'bg-[#e6f0ed] text-[#006c49]' 
+                    : 'text-slate-600 hover:bg-slate-50 hover:translate-x-1'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{lang.flag}</span>
+                    {lang.name}
+                  </div>
+                  {currentLang.code === lang.code && <Check size={16} strokeWidth={3} />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
+        {/* GIAO TẠI */}
+        <div className="hidden lg:flex flex-col items-end pr-6 border-r border-slate-100 group cursor-pointer">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1 group-hover:text-[#006c49] transition-colors">Giao tại</p>
+          <p className="text-[13px] font-black text-[#161b22] flex items-center gap-1.5">
+            TP.HCM <MapPin size={15} className="text-[#fea619] fill-[#fea619]/10" />
+          </p>
+        </div>
+
+        {/* AUTH SECTION */}
         {user ? (
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">Hi, {user.full_name || 'Demi'}</span>
-            <button onClick={logout} className="text-xs bg-red-500/20 text-red-400 px-3 py-1 rounded-lg border border-red-500/20">Đăng xuất</button>
+          <div className="flex items-center gap-4 bg-[#f8fafc] pl-4 pr-1.5 py-1.5 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="text-right hidden sm:block">
+              <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Thành viên Demi</p>
+              <p className="text-[13px] font-black text-slate-900 leading-none mt-0.5">{user.full_name || 'Khách'}</p>
+            </div>
+            <button 
+              onClick={handleLogout} 
+              className="bg-white text-red-500 p-2.5 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm active:scale-90 border border-slate-100"
+              title="Đăng xuất"
+            >
+              <LogOut size={18} strokeWidth={2.5} />
+            </button>
           </div>
         ) : (
           <button 
             onClick={() => navigate("/login")}
-            className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-full text-sm font-bold transition shadow-lg shadow-blue-500/20"
+            className="bg-[#006c49] hover:bg-[#004d34] text-white px-8 py-3 rounded-2xl text-[11px] font-black transition-all shadow-lg shadow-[#006c49]/20 hover:shadow-[#006c49]/40 active:scale-95 uppercase tracking-widest"
           >
             Đăng nhập
           </button>

@@ -1,12 +1,22 @@
 @import "tailwindcss";
 
+/* 1. Nạp font Plus Jakarta Sans hỗ trợ tiếng Việt đầy đủ */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 body {
   margin: 0;
-  background-color: #0b0e14; /* Màu nền tối sâu */
+  background-color: #0b0e14; /* Giữ màu nền tối của Demi */
   color: white;
-  font-family: 'Inter', sans-serif;
+  
+  /* 2. Ưu tiên Jakarta Sans, nếu lỗi sẽ nhảy sang Inter hoặc hệ thống sans-serif */
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif !important;
+  
+  /* 3. Khử răng cưa giúp dấu tiếng Việt sắc nét hơn */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Hiệu ứng fadeIn của bạn */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -14,4 +24,9 @@ body {
 
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Ép tất cả các thẻ tiêu đề không bị nhảy font có chân */
+h1, h2, h3, h4, h5, h6, span, p, li, a, button, input {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
