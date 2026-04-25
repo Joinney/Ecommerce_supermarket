@@ -18,7 +18,7 @@ export default function Login() {
         { value: "30m", label: "Fast Delivery" },
     ];
 
-    // CHỐT: Nếu đã có user (đăng nhập rồi) thì không cho ở lại trang Login
+    // Nếu đã đăng nhập thì đá về trang chủ ngay
     useEffect(() => {
         if (user) {
             navigate("/", { replace: true });
@@ -33,8 +33,9 @@ export default function Login() {
         try {
             const result = await login(username, password);
             if (result.success) {
-                // CHỐT: Dùng replace để tránh việc nhấn nút Back quay lại trang Login
-                navigate("/", { replace: true });
+                // CHỐT HẠ: Dùng window.location.href để ép reload trang chủ
+                // Cách này giúp dứt điểm lỗi màn hình đen trên Render/Nginx
+                window.location.href = "/"; 
             } else {
                 setError(result.message || "Email hoặc mật khẩu không đúng");
             }
@@ -46,7 +47,6 @@ export default function Login() {
     };
 
     const handleGoogleLogin = () => {
-        // CHỐT: Ưu tiên lấy URL từ env của Render, nếu không có mới dùng localhost
         const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
         window.location.href = `${apiBaseUrl}/api/auth/google`;
     };
@@ -161,11 +161,6 @@ export default function Login() {
                             </div>
                         </div>
 
-                        <label className="flex items-center gap-2 cursor-pointer w-fit group">
-                            <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-[#006c49] focus:ring-[#006c49]" />
-                            <span className="text-slate-500 text-xs font-medium group-hover:text-slate-700 transition-colors">Remember Me</span>
-                        </label>
-
                         <button 
                             disabled={loading} 
                             className="w-full bg-[#006c49] hover:bg-[#004d34] text-white py-3.5 xl:py-4.5 rounded-xl font-black text-sm xl:text-lg shadow-lg active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed transition-all uppercase flex items-center justify-center gap-2"
@@ -202,11 +197,6 @@ export default function Login() {
                     </p>
                 </div>
             </section>
-
-            <div className="fixed bottom-6 right-6 z-[10000] bg-[#fea619] text-[#684000] px-4 py-2 rounded-full shadow-lg flex items-center gap-2 cursor-default transition-all hover:scale-105">
-                <CheckCircle2 size={16} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Best Prices Guaranteed</span>
-            </div>
 
             <style dangerouslySetInnerHTML={{ __html: `
                 .demi-input { 

@@ -35,23 +35,33 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- HÀM ĐĂNG XUẤT HOÀN CHỈNH ---
+  // --- HÀM ĐĂNG XUẤT HOÀN CHỈNH (XÓA STATE, LOCALSTORAGE & COOKIE) ---
   const handleLogout = async () => {
     try {
-      // 1. Gọi hàm logout từ AuthContext để xóa state user & xóa token trong đó
+      // 1. Gọi hàm logout từ AuthContext (xóa state user)
       await logout(); 
       
-      // 2. Đảm bảo xóa sạch các dấu vết còn lại trong localStorage
+      // 2. Xóa sạch LocalStorage liên quan đến Auth
       localStorage.removeItem('token');
-      localStorage.removeItem('user'); // Nếu bạn có lưu user info riêng
+      localStorage.removeItem('user');
+
+      // 3. XÓA SẠCH COOKIE (Đảm bảo không bị kẹt session Google/Render)
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i];
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+        
+        // Ghi đè cookie bằng giá trị rỗng và đặt ngày hết hạn về quá khứ
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname};`;
+      }
       
-      // 3. Điều hướng về trang chủ và dùng replace để xóa lịch sử chuyển trang
-      // Dùng navigate giúp app mượt mà (SPA), nếu vẫn lỗi đen thì mới dùng window.location.href
-      navigate("/", { replace: true });
+      // 4. Ép load lại trang chủ (Dùng href để dứt điểm lỗi màn hình đen trên Render)
+      window.location.href = "/";
       
     } catch (error) {
       console.error("Logout failed:", error);
-      // Phương án dự phòng cuối cùng nếu React state bị kẹt
       window.location.href = "/";
     }
   };
