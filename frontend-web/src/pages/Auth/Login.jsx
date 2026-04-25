@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle2, ArrowLeft } from "lucide-react";
@@ -10,7 +10,7 @@ export default function Login() {
     const [error, setError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
 
-    const { login } = useContext(AuthContext);
+    const { login, user } = useContext(AuthContext);
     const navigate = useNavigate();
 
     const stats = [
@@ -18,22 +18,35 @@ export default function Login() {
         { value: "30m", label: "Fast Delivery" },
     ];
 
+    // CHỐT: Nếu đã có user (đăng nhập rồi) thì không cho ở lại trang Login
+    useEffect(() => {
+        if (user) {
+            navigate("/", { replace: true });
+        }
+    }, [user, navigate]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
         setLoading(true);
-        const result = await login(username, password);
-        if (result.success) {
-            navigate("/");
-        } else {
-            setError(result.message);
+        
+        try {
+            const result = await login(username, password);
+            if (result.success) {
+                // CHỐT: Dùng replace để tránh việc nhấn nút Back quay lại trang Login
+                navigate("/", { replace: true });
+            } else {
+                setError(result.message || "Email hoặc mật khẩu không đúng");
+            }
+        } catch (err) {
+            setError("Lỗi kết nối server. Vui lòng thử lại sau.");
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
-    // HÀM XỬ LÝ GOOGLE LOGIN ĐỒNG BỘ
     const handleGoogleLogin = () => {
-        // Lấy Base URL từ biến môi trường, mặc định là localhost nếu chưa cấu hình
+        // CHỐT: Ưu tiên lấy URL từ env của Render, nếu không có mới dùng localhost
         const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
         window.location.href = `${apiBaseUrl}/api/auth/google`;
     };
@@ -97,7 +110,7 @@ export default function Login() {
                     </header>
 
                     {error && (
-                        <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-xs font-bold text-center animate-pulse">
+                        <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-xs font-bold text-center animate-bounce">
                             ⚠️ {error}
                         </div>
                     )}
@@ -155,9 +168,13 @@ export default function Login() {
 
                         <button 
                             disabled={loading} 
-                            className="w-full bg-[#006c49] hover:bg-[#004d34] text-white py-3.5 xl:py-4.5 rounded-xl font-black text-sm xl:text-lg shadow-lg active:scale-[0.98] transition-all uppercase flex items-center justify-center gap-2"
+                            className="w-full bg-[#006c49] hover:bg-[#004d34] text-white py-3.5 xl:py-4.5 rounded-xl font-black text-sm xl:text-lg shadow-lg active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed transition-all uppercase flex items-center justify-center gap-2"
                         >
-                            {loading ? "..." : <>Sign In <ArrowRight size={20} /></>}
+                            {loading ? (
+                                <span className="animate-pulse">Processing...</span>
+                            ) : (
+                                <>Sign In <ArrowRight size={20} /></>
+                            )}
                         </button>
                     </form>
 
@@ -168,7 +185,6 @@ export default function Login() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        {/* NÚT GOOGLE ĐÃ CẬP NHẬT */}
                         <button 
                             type="button"
                             onClick={handleGoogleLogin}
@@ -187,7 +203,6 @@ export default function Login() {
                 </div>
             </section>
 
-            {/* Badge "Best Prices" */}
             <div className="fixed bottom-6 right-6 z-[10000] bg-[#fea619] text-[#684000] px-4 py-2 rounded-full shadow-lg flex items-center gap-2 cursor-default transition-all hover:scale-105">
                 <CheckCircle2 size={16} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">Best Prices Guaranteed</span>

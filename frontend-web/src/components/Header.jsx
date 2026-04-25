@@ -35,11 +35,25 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Hàm xử lý Logout triệt để để tránh lỗi màn hình đen
-  const handleLogout = () => {
-    logout(); // Gọi hàm logout từ Context
-    localStorage.removeItem('token'); // Xóa token thủ công cho chắc chắn
-    window.location.href = "/"; // Ép trình duyệt load lại hoàn toàn trang chủ
+  // --- HÀM ĐĂNG XUẤT HOÀN CHỈNH ---
+  const handleLogout = async () => {
+    try {
+      // 1. Gọi hàm logout từ AuthContext để xóa state user & xóa token trong đó
+      await logout(); 
+      
+      // 2. Đảm bảo xóa sạch các dấu vết còn lại trong localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user'); // Nếu bạn có lưu user info riêng
+      
+      // 3. Điều hướng về trang chủ và dùng replace để xóa lịch sử chuyển trang
+      // Dùng navigate giúp app mượt mà (SPA), nếu vẫn lỗi đen thì mới dùng window.location.href
+      navigate("/", { replace: true });
+      
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Phương án dự phòng cuối cùng nếu React state bị kẹt
+      window.location.href = "/";
+    }
   };
 
   const isAuthPage = ["/login", "/signup", "/forgot-password"].includes(location.pathname);
@@ -133,10 +147,10 @@ export default function Header() {
             </div>
             <button 
               onClick={handleLogout} 
-              className="bg-white text-red-500 p-2.5 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm active:scale-90 border border-slate-100"
+              className="bg-white text-red-500 p-2.5 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm active:scale-90 border border-slate-100 group"
               title="Đăng xuất"
             >
-              <LogOut size={18} strokeWidth={2.5} />
+              <LogOut size={18} strokeWidth={2.5} className="group-hover:rotate-12 transition-transform" />
             </button>
           </div>
         ) : (
