@@ -12,6 +12,6 @@ export default defineConfig({
       'host.docker.internal',
       'localhost'
     ]
-    // ------------------------
+
   }
 })
