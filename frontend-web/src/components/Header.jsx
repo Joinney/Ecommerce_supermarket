@@ -4,10 +4,11 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import Logo from "../assets/Demi Mart.png";
 import { 
   Globe, ChevronDown, Check, Search, LogOut, MapPin, 
-  ShoppingCart, Calendar, User, Gift
+  ShoppingCart, Calendar, User, Gift, Menu // 1. Bổ sung thêm icon Menu ở đây
 } from "lucide-react";
 
-export default function Header() {
+// 2. Nhận prop onOpenMenu từ App.jsx
+export default function Header({ onOpenMenu }) {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,7 +44,7 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Logic Logout triệt để của bạn
+  // Logic Logout triệt để
   const handleLogout = async () => {
     try {
       await logout(); 
@@ -67,6 +68,14 @@ export default function Header() {
       {/* TẦNG 1 */}
       <div className="h-[64px] md:h-[72px] px-4 md:px-10 flex items-center justify-between gap-4 md:gap-8 border-b border-slate-50">
         
+        {/* 3. BỔ SUNG NÚT MENU Ở ĐÂY (Chỉ hiện trên mobile < 1024px) */}
+        <button 
+          onClick={onOpenMenu} 
+          className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+        >
+          <Menu size={24} />
+        </button>
+
         <Link to="/" className="flex-shrink-0 transition-transform active:scale-95 hover:scale-105 duration-300">
           <img src={Logo} alt="Demi Mart" className="h-7 md:h-9 w-auto object-contain drop-shadow-sm" />
         </Link>
@@ -104,7 +113,7 @@ export default function Header() {
             )}
           </div>
 
-          {/* Cụm Auth theo style Đăng nhập / Đăng ký */}
+          {/* Cụm Auth */}
           <div className="flex items-center gap-2 md:gap-4">
             {user ? (
               <div className="flex items-center gap-2 md:gap-3 bg-[#f8fafc] p-1 md:p-1.5 rounded-full border border-slate-100 md:pr-4 group transition-all">

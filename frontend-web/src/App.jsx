@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Header from "./components/Header";
@@ -5,31 +6,43 @@ import Sidebar from "./components/Sidebar";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Login from "./pages/Auth/Login";
-import Signup from "./pages/Auth/Signup"; // Import trang đăng ký
-import ForgotPassword from "./pages/Auth/ForgotPassword"; // Import trang quên mật khẩu
-import Profile from "./pages/Profile/Profile"; // Import trang Profile
-/**
- * 1. MAIN LAYOUT: Cho trang chủ và mua sắm
- * (Có Header + Sidebar khít chuẩn Weee!)
- */
-const MainLayout = () => (
-  <div className="min-h-screen flex flex-col bg-white">
-    <Header />
-    <div className="flex flex-1 pt-16 w-full"> 
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 border-l border-gray-100"> 
-        <main className="flex-1 overflow-x-hidden">
-          <Outlet />
-        </main>
-        <Footer />
-      </div>
-    </div>
-  </div>
-);
+import Signup from "./pages/Auth/Signup";
+import ForgotPassword from "./pages/Auth/ForgotPassword";
+import Profile from "./pages/Profile/Profile";
 
 /**
- * 2. AUTH LAYOUT: Cho Login, Signup, Forgot Password
- * (Tràn viền hoàn toàn, không Header/Sidebar)
+ * 1. MAIN LAYOUT: Cập nhật logic ẩn/hiện Sidebar
+ */
+const MainLayout = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Truyền hàm mở vào Header */}
+      <Header onOpenMenu={() => setIsSidebarOpen(true)} />
+      
+      {/* Tăng pt-16 lên pt-[112px] để không bị Header 2 tầng đè lên nội dung */}
+      <div className="flex flex-1 pt-[112px] w-full relative"> 
+        
+        {/* Truyền state và hàm đóng vào Sidebar */}
+        <Sidebar 
+          isOpen={isSidebarOpen} 
+          onClose={() => setIsSidebarOpen(false)} 
+        />
+
+        <div className="flex-1 flex flex-col min-w-0 border-l border-gray-100"> 
+          <main className="flex-1 overflow-x-hidden">
+            <Outlet />
+          </main>
+          <Footer />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * 2. AUTH LAYOUT: Giữ nguyên logic tràn viền
  */
 const AuthLayout = () => (
   <div className="min-h-screen w-full bg-white flex items-center justify-center">
@@ -54,8 +67,6 @@ function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
           </Route>
-
-          {/* Bạn có thể thêm trang 404 ở đây */}
         </Routes>
       </Router>
     </AuthProvider>
