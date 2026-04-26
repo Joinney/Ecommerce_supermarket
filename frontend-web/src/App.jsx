@@ -7,7 +7,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup"; // Import trang đăng ký
 import ForgotPassword from "./pages/Auth/ForgotPassword"; // Import trang quên mật khẩu
-
+import Profile from "./pages/Profile/Profile"; // Import trang Profile
 /**
  * 1. MAIN LAYOUT: Cho trang chủ và mua sắm
  * (Có Header + Sidebar khít chuẩn Weee!)
@@ -45,6 +45,7 @@ function App() {
           {/* Nhóm trang mua sắm chính */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
 
           {/* Nhóm trang xác thực tài khoản */}

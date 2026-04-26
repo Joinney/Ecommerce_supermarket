@@ -73,7 +73,7 @@ export default function Footer() {
       {/* Bản quyền */}
       <div className="max-w-7xl mx-auto border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
         <p className="text-gray-400 text-[10px] font-black uppercase tracking-[1.5px]">
-          © {currentYear} Demi Supermarket. Built for ETECHS Internship Project.
+          © {currentYear} Demi Supermarket. Built for Võ Duy Toàn Project.
         </p>
         
         <div className="flex items-center gap-6">

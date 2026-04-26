@@ -8,7 +8,7 @@ body {
   background-color: #0b0e14; /* Giữ màu nền tối của Demi */
   color: white;
   
-  /* 2. Ưu tiên Jakarta Sans, nếu lỗi sẽ nhảy sang Inter hoặc hệ thống sans-serif */
+  /* 2. Ưu tiên Jakarta Sans */
   font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif !important;
   
   /* 3. Khử răng cưa giúp dấu tiếng Việt sắc nét hơn */
@@ -16,7 +16,27 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Hiệu ứng fadeIn của bạn */
+/* --- CUSTOM SCROLLBAR (THANH TRƯỢT XANH DEMI MART) --- */
+/* Áp dụng cho toàn bộ trình duyệt */
+::-webkit-scrollbar {
+  width: 6px;  /* Độ rộng thanh cuộn dọc */
+  height: 6px; /* Độ cao thanh cuộn ngang */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; /* Nền thanh cuộn trong suốt để giữ màu dark mode của Demi */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #006c49;    /* Màu xanh thương hiệu Demi */
+  border-radius: 20px;    /* Bo tròn thanh trượt */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #004d34;    /* Màu xanh đậm hơn khi hover */
+}
+
+/* --- ANIMATIONS --- */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -26,7 +46,17 @@ body {
   animation: fadeIn 0.5s ease-out forwards;
 }
 
-/* Ép tất cả các thẻ tiêu đề không bị nhảy font có chân */
-h1, h2, h3, h4, h5, h6, span, p, li, a, button, input {
+/* --- TYPOGRAPHY FIX --- */
+/* Ép tất cả các thành phần văn bản dùng chung font để không bị lỗi font hệ thống */
+h1, h2, h3, h4, h5, h6, span, p, li, a, button, input, textarea, select {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+/* Ẩn thanh cuộn mặc định của IE, Edge và Firefox nhưng vẫn cho cuộn */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari and Opera */
 }
