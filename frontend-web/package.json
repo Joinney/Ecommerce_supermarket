@@ -12,6 +12,7 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.3",
     "axios": "^1.15.1",
+    "framer-motion": "^12.38.0",
     "i18next": "^26.0.8",
     "i18next-browser-languagedetector": "^8.2.1",
     "lucide-react": "^1.11.0",

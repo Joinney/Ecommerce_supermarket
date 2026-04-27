@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, AuthContext } from "./context/AuthContext"; 
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Footer from "./components/Footer";
@@ -11,27 +11,23 @@ import ForgotPassword from "./pages/Auth/ForgotPassword";
 import Profile from "./pages/Profile/Profile";
 
 /**
- * 1. MAIN LAYOUT: Cập nhật logic ẩn/hiện Sidebar
+ * 1. MAIN LAYOUT
  */
 const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      {/* Truyền hàm mở vào Header */}
       <Header onOpenMenu={() => setIsSidebarOpen(true)} />
       
-      {/* Tăng pt-16 lên pt-[112px] để không bị Header 2 tầng đè lên nội dung */}
-      <div className="flex flex-1 pt-[112px] w-full relative"> 
-        
-        {/* Truyền state và hàm đóng vào Sidebar */}
+      <div className="flex flex-1 pt-[112px] w-full relative bg-white"> 
         <Sidebar 
           isOpen={isSidebarOpen} 
           onClose={() => setIsSidebarOpen(false)} 
         />
 
-        <div className="flex-1 flex flex-col min-w-0 border-l border-gray-100"> 
-          <main className="flex-1 overflow-x-hidden">
+        <div className="flex-1 flex flex-col min-w-0 border-l border-gray-100 bg-white"> 
+          <main className="flex-1 overflow-x-hidden bg-white">
             <Outlet />
           </main>
           <Footer />
@@ -42,7 +38,7 @@ const MainLayout = () => {
 };
 
 /**
- * 2. AUTH LAYOUT: Giữ nguyên logic tràn viền
+ * 2. AUTH LAYOUT
  */
 const AuthLayout = () => (
   <div className="min-h-screen w-full bg-white flex items-center justify-center">
@@ -50,25 +46,48 @@ const AuthLayout = () => (
   </div>
 );
 
+/**
+ * 3. APP ROUTES (Sử dụng màn hình chờ màu trắng)
+ */
+const AppRoutes = () => {
+  const { loading } = useContext(AuthContext);
+
+  // Khi đang kiểm tra Auth, Render một màn hình trắng tinh
+  // Giúp loại bỏ hoàn toàn hiện tượng chớp đen khi chuyển Layout
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-white z-[9999] flex items-center justify-center">
+        {/* Demi có thể thêm một Logo mờ hoặc Spinner cực nhỏ màu xanh ở đây nếu thích */}
+        <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <Router>
+      <Routes>
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/profile" element={<Profile />} />
+        </Route>
+
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+        </Route>
+      </Routes>
+    </Router>
+  );
+};
+
+/**
+ * 4. FINAL APP
+ */
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Nhóm trang mua sắm chính */}
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/profile" element={<Profile />} />
-          </Route>
-
-          {/* Nhóm trang xác thực tài khoản */}
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-          </Route>
-        </Routes>
-      </Router>
+       <AppRoutes />
     </AuthProvider>
   );
 }
