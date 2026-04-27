@@ -14,12 +14,15 @@ export default function Header({ onOpenMenu }) {
 
   const [isLangOpen, setIsLangOpen] = useState(false);
   const langRef = useRef(null);
-  const [currentDate, setCurrentDate] = useState("");
+  
+  // Mẹo: Khởi tạo giá trị mồi để khung span không bị dẹt khi mới load
+  const [currentDate, setCurrentDate] = useState("Đang tải...");
 
   // Logic ngày tháng Tiếng Việt
   useEffect(() => {
     const options = { weekday: 'long', day: 'numeric', month: 'numeric' };
-    setCurrentDate(new Date().toLocaleDateString('vi-VN', options));
+    const dateStr = new Date().toLocaleDateString('vi-VN', options);
+    setCurrentDate(dateStr);
   }, []);
 
   const languages = [
@@ -59,16 +62,16 @@ export default function Header({ onOpenMenu }) {
   };
 
   const isAuthPage = ["/login", "/signup", "/forgot-password"].includes(location.pathname);
-  const getInitial = (name) => name ? name.charAt(0).toUpperCase() : "D";
 
   return (
-    <header className="fixed top-0 w-full z-[10000] font-sans shadow-sm bg-white/95 backdrop-blur-md">
+    // Gia cố: min-h để không bị sụp layout khi React đang hydrate
+    <header className="fixed top-0 w-full z-[10000] font-sans shadow-sm bg-white/95 backdrop-blur-md min-h-[96px] md:min-h-[112px]">
       
       {/* --- TẦNG 1 --- */}
       <div className="h-[60px] md:h-[72px] px-3 md:px-10 flex items-center justify-between gap-2 border-b border-slate-50">
         
-        {/* Nhóm Trái: Menu + Logo */}
-        <div className="flex items-center gap-1 md:gap-4 flex-shrink-0">
+        {/* Nhóm Trái: Giữ chỗ cho Logo */}
+        <div className="flex items-center gap-1 md:gap-4 flex-shrink-0 min-w-[130px] md:min-w-[170px]">
           <button 
             onClick={onOpenMenu} 
             className="lg:hidden p-1.5 text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
@@ -76,14 +79,21 @@ export default function Header({ onOpenMenu }) {
             <Menu size={22} />
           </button>
 
-          <Link to="/" className="transition-transform active:scale-95 flex-shrink-0">
-            <img src={Logo} alt="Demi Mart" className="h-6 md:h-8 w-auto object-contain drop-shadow-sm" />
+          <Link to="/" className="transition-transform active:scale-95 flex-shrink-0 block">
+            {/* Fix: Ép kích thước ảnh để Render không bị giật */}
+            <img 
+              src={Logo} 
+              alt="Demi Mart" 
+              width="130" 
+              height="32" 
+              className="h-6 md:h-8 w-auto object-contain drop-shadow-sm" 
+            />
           </Link>
         </div>
 
-        {/* Nhóm Giữa: Search Bar (Chỉ hiện trên Tablet/Desktop để không chiếm chỗ Mobile) */}
+        {/* Nhóm Giữa: Search Bar */}
         {!isAuthPage && (
-          <div className="flex-1 max-w-xl relative group hidden sm:block">
+          <div className="flex-1 max-w-xl relative group hidden sm:block min-h-[45px]">
             <input 
               type="text" 
               placeholder="Tìm sản phẩm..." 
@@ -95,8 +105,8 @@ export default function Header({ onOpenMenu }) {
           </div>
         )}
 
-        {/* Nhóm Phải: Actions */}
-        <div className="flex items-center gap-2 md:gap-6 flex-shrink-0">
+        {/* Nhóm Phải: Actions - Cố định không gian để nút không nhảy khi User đăng nhập */}
+        <div className="flex items-center gap-2 md:gap-6 flex-shrink-0 min-w-[160px] md:min-w-[300px] justify-end">
           
           {/* Ngôn ngữ */}
           <div className="relative" ref={langRef}>
@@ -122,8 +132,8 @@ export default function Header({ onOpenMenu }) {
             )}
           </div>
 
-          {/* Auth: Đăng nhập / Đăng ký */}
-          <div className="flex items-center">
+          {/* Auth: Cố định min-width tránh co giãn thanh header */}
+          <div className="flex items-center min-w-[100px] md:min-w-[140px] justify-end">
             {user ? (
               <div className="flex items-center gap-2 md:gap-3 bg-[#f8fafc] p-1 md:p-1.5 rounded-full border border-slate-100 md:pr-3 group transition-all">
                 <Link to="/profile" className="flex-shrink-0">
@@ -135,19 +145,19 @@ export default function Header({ onOpenMenu }) {
                 <button onClick={handleLogout} className="text-slate-300 hover:text-red-500 transition-all ml-1"><LogOut size={16}/></button>
               </div>
             ) : (
-              <div className="flex items-center gap-1 text-slate-700 font-bold text-[12px] md:text-[14px]">
+              <div className="flex items-center gap-1 text-slate-700 font-bold text-[12px] md:text-[14px] whitespace-nowrap">
                 <User size={18} className="text-slate-800" />
                 <div className="flex items-center">
-                  <Link to="/login" className="hover:text-[#006c49] transition-colors whitespace-nowrap">Đăng nhập</Link>
+                  <Link to="/login" className="hover:text-[#006c49] transition-colors">Đăng nhập</Link>
                   <span className="mx-1 text-slate-300 font-light hidden md:inline">/</span>
-                  <Link to="/signup" className="hover:text-[#006c49] transition-colors whitespace-nowrap hidden md:inline">Đăng ký</Link>
+                  <Link to="/signup" className="hover:text-[#006c49] transition-colors hidden md:inline">Đăng ký</Link>
                 </div>
               </div>
             )}
           </div>
 
           {/* Giỏ hàng */}
-          <button className="bg-[#006c49] text-white p-2 md:px-5 md:py-2.5 rounded-full md:rounded-2xl flex items-center gap-2 shadow-lg shadow-[#006c49]/20 active:scale-95 transition-all flex-shrink-0">
+          <button className="bg-[#006c49] text-white p-2 md:px-5 md:py-2.5 rounded-full md:rounded-2xl flex items-center gap-2 shadow-lg shadow-[#006c49]/20 active:scale-95 transition-all flex-shrink-0 min-w-[44px] md:min-w-[120px] justify-center">
             <div className="relative">
               <ShoppingCart size={18} strokeWidth={2.5} />
               <span className="absolute -top-2 -right-2 bg-[#fea619] text-[#161b22] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#006c49]">2</span>
@@ -157,9 +167,9 @@ export default function Header({ onOpenMenu }) {
         </div>
       </div>
 
-      {/* --- TẦNG 2 --- */}
+      {/* --- TẦNG 2: FIX VỠ LAYOUT NGÀY THÁNG --- */}
       <div className="h-9 md:h-10 bg-white border-b border-slate-100 px-3 md:px-10 flex items-center justify-between overflow-x-auto scrollbar-hide">
-        <nav className="flex items-center gap-5 md:gap-8 whitespace-nowrap">
+        <nav className="flex items-center gap-5 md:gap-8 whitespace-nowrap min-w-max">
           {["Toàn cầu+", "Mới về", "Bán chạy", "Ưu đãi"].map((item) => (
             <Link key={item} to="/" className="text-[10px] md:text-[11px] font-black text-slate-500 hover:text-[#006c49] uppercase tracking-widest">{item}</Link>
           ))}
@@ -168,14 +178,19 @@ export default function Header({ onOpenMenu }) {
           </Link>
         </nav>
 
-        <div className="hidden md:flex items-center gap-5 flex-shrink-0 ml-4">
-          <div className="flex items-center gap-2">
-            <MapPin size={16} className="text-[#fea619]" />
-            <span className="text-[10px] md:text-[11px] font-black text-slate-700 uppercase">TP. Hồ Chí Minh</span>
+        {/* Fix: Cố định khung bên phải để không bị text nhảy làm lệch Menu */}
+        <div className="hidden md:flex items-center flex-shrink-0 ml-4">
+          <div className="flex items-center gap-2 min-w-[140px] justify-end pr-4">
+            <MapPin size={16} className="text-[#fea619] flex-shrink-0" />
+            <span className="text-[10px] md:text-[11px] font-black text-slate-700 uppercase whitespace-nowrap">TP. Hồ Chí Minh</span>
           </div>
-          <div className="flex items-center gap-2 border-l border-slate-100 pl-5 uppercase">
-            <Calendar size={15} className="text-slate-400" />
-            <span className="text-[10px] md:text-[11px] font-black text-slate-600">{currentDate}</span>
+          
+          {/* Quan trọng: min-w-[165px] là độ rộng an toàn nhất cho cụm Thứ Hai, 27/04 */}
+          <div className="flex items-center gap-2 border-l border-slate-100 pl-5 uppercase min-w-[165px] justify-start">
+            <Calendar size={15} className="text-slate-400 flex-shrink-0" />
+            <span className="text-[10px] md:text-[11px] font-black text-slate-600 whitespace-nowrap tabular-nums">
+              {currentDate}
+            </span>
           </div>
         </div>
       </div>

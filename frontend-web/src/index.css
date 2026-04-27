@@ -1,12 +1,18 @@
 @import "tailwindcss";
 
-/* 1. Nạp font Plus Jakarta Sans hỗ trợ tiếng Việt đầy đủ */
+/* 1. Nạp font Plus Jakarta Sans - display=swap để chống nhảy chữ */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Ép trình duyệt hiểu màu nền trắng ngay từ tầng root để không bị chớp đen */
+  background-color: #ffffff;
+}
 
 body {
   margin: 0;
-  background-color: #0b0e14; /* Giữ màu nền tối của Demi */
-  color: white;
+  /* Quan trọng: Để màu trắng nếu App của Demi là màu sáng để hết chớp gắt */
+  background-color: #ffffff; 
+  color: #1e293b; /* Màu chữ slate đậm cho sang */
   
   /* 2. Ưu tiên Jakarta Sans */
   font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif !important;
@@ -14,26 +20,28 @@ body {
   /* 3. Khử răng cưa giúp dấu tiếng Việt sắc nét hơn */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  
+  /* Chống giật layout theo chiều ngang */
+  overflow-x: hidden;
 }
 
 /* --- CUSTOM SCROLLBAR (THANH TRƯỢT XANH DEMI MART) --- */
-/* Áp dụng cho toàn bộ trình duyệt */
 ::-webkit-scrollbar {
-  width: 6px;  /* Độ rộng thanh cuộn dọc */
-  height: 6px; /* Độ cao thanh cuộn ngang */
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent; /* Nền thanh cuộn trong suốt để giữ màu dark mode của Demi */
+  background: #f1f5f9; /* Màu nền nhẹ để thấy rõ thanh cuộn */
 }
 
 ::-webkit-scrollbar-thumb {
   background: #006c49;    /* Màu xanh thương hiệu Demi */
-  border-radius: 20px;    /* Bo tròn thanh trượt */
+  border-radius: 20px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #004d34;    /* Màu xanh đậm hơn khi hover */
+  background: #004d34;
 }
 
 /* --- ANIMATIONS --- */
@@ -47,16 +55,37 @@ body {
 }
 
 /* --- TYPOGRAPHY FIX --- */
-/* Ép tất cả các thành phần văn bản dùng chung font để không bị lỗi font hệ thống */
 h1, h2, h3, h4, h5, h6, span, p, li, a, button, input, textarea, select {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
-/* Ẩn thanh cuộn mặc định của IE, Edge và Firefox nhưng vẫn cho cuộn */
+/* --- FIX VỠ LAYOUT KHI LOAD (UTILITIES) --- */
+/* Giữ chỗ cho các block hình ảnh */
+img {
+  font-style: italic;
+  vertical-align: middle;
+  shape-margin: 0.75rem;
+}
+
+/* Lớp ẩn thanh cuộn nhưng vẫn cho cuộn */
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .no-scrollbar::-webkit-scrollbar {
-  display: none;             /* Chrome, Safari and Opera */
+  display: none;
+}
+
+/* Màn hình loading trắng mồi để bọc App.jsx */
+.loading-screen {
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 99999;
 }
