@@ -2,18 +2,19 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import pool from '../../configs/database.js';
 
-// --- HÀM TẠO TOKEN (Dùng chung cho gọn) ---
+// --- HÀM TẠO TOKEN ---
 const generateTokens = (user) => {
+    // Sử dụng biến môi trường hoặc giá trị mặc định để tránh lỗi 500
     const accessToken = jwt.sign(
         { id: user.user_id, role: user.role },
-        process.env.JWT_ACCESS_SECRET || 'access_secret_demi',
-        { expiresIn: '15m' } // Access token ngắn hạn
+        process.env.JWT_ACCESS_SECRET || 'vdt_secret_2026',
+        { expiresIn: '15m' }
     );
 
     const refreshToken = jwt.sign(
         { id: user.user_id },
-        process.env.JWT_REFRESH_SECRET || 'refresh_secret_demi',
-        { expiresIn: '7d' } // Refresh token dài hạn
+        process.env.JWT_REFRESH_SECRET || 'vdt_refresh_secret_2026',
+        { expiresIn: '7d' }
     );
 
     return { accessToken, refreshToken };
@@ -48,42 +49,47 @@ export const signup = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Signup Error:", error);
         res.status(500).json({ error: error.message });
     }
 };
 
 // --- 2. ĐĂNG NHẬP (SIGNIN) ---
 export const signin = async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password } = req.body; // 'username' này có thể là email gửi từ Web
     try {
-        const userResult = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-        if (userResult.rows.length === 0) return res.status(404).json({ message: "User không tồn tại!" });
+        // Tìm theo username HOẶC email để khớp với giao diện Web của Demi
+        const userResult = await pool.query(
+            'SELECT * FROM users WHERE username = $1 OR email = $1', 
+            [username]
+        );
+        
+        if (userResult.rows.length === 0) return res.status(404).json({ message: "Tài khoản không tồn tại!" });
 
         const user = userResult.rows[0];
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) return res.status(400).json({ message: "Mật khẩu sai rồi Demi ơi!" });
 
-        // Tạo bộ đôi Token
         const { accessToken, refreshToken } = generateTokens(user);
 
-        // Lưu Refresh Token vào DB để quản lý phiên làm việc
+        // Lưu Refresh Token vào DB
         await pool.query(
             'UPDATE users SET refresh_token = $1, last_login = NOW() WHERE user_id = $2', 
             [refreshToken, user.user_id]
         );
 
-        // Gửi Refresh Token qua Cookie (Bảo mật cao, chống XSS)
+        // Gửi Refresh Token qua Cookie
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Chỉ bật true khi chạy HTTPS thực tế
-            sameSite: 'Lax',
+            secure: process.env.NODE_ENV === 'production', 
+            sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
             maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
         res.json({ 
-            message: "Đăng nhập thành công!", 
-            token: accessToken, // Access token dùng cho header Authorization
-            refreshToken: refreshToken, // Trả về để Mobile lưu LocalStorage nếu cần
+            message: "Chào mừng Demi trở lại!", 
+            token: accessToken,
+            refreshToken: refreshToken, 
             user: { 
                 id: user.user_id,
                 username: user.username, 
@@ -93,32 +99,29 @@ export const signin = async (req, res) => {
             } 
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Signin Error:", error); // Log ra Terminal để debug
+        res.status(500).json({ error: "Lỗi hệ thống, kiểm tra lại biến môi trường!" });
     }
 };
 
 // --- 3. LÀM MỚI TOKEN (REFRESH TOKEN) ---
 export const refreshToken = async (req, res) => {
-    // Lấy từ Cookie hoặc từ Body (đối với Mobile)
-    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+    const token = req.cookies.refreshToken || req.body.refreshToken;
 
-    if (!refreshToken) return res.status(401).json({ message: "Phiên làm việc hết hạn, vui lòng đăng nhập lại!" });
+    if (!token) return res.status(401).json({ message: "Phiên làm việc hết hạn!" });
 
     try {
-        // Kiểm tra token trong DB
-        const userResult = await pool.query('SELECT * FROM users WHERE refresh_token = $1', [refreshToken]);
-        if (userResult.rows.length === 0) return res.status(403).json({ message: "Phiên làm việc không hợp lệ!" });
+        const userResult = await pool.query('SELECT * FROM users WHERE refresh_token = $1', [token]);
+        if (userResult.rows.length === 0) return res.status(403).json({ message: "Phiên không hợp lệ!" });
 
         const user = userResult.rows[0];
 
-        // Xác thực chữ ký JWT
-        jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'refresh_secret_demi', (err, decoded) => {
-            if (err) return res.status(403).json({ message: "Token không hợp lệ hoặc đã bị thu hồi!" });
+        jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'vdt_refresh_secret_2026', (err, decoded) => {
+            if (err) return res.status(403).json({ message: "Token không hợp lệ!" });
 
-            // Cấp Access Token mới
             const newAccessToken = jwt.sign(
                 { id: user.user_id, role: user.role },
-                process.env.JWT_ACCESS_SECRET || 'access_secret_demi',
+                process.env.JWT_ACCESS_SECRET || 'vdt_secret_2026',
                 { expiresIn: '15m' }
             );
 
@@ -132,14 +135,18 @@ export const refreshToken = async (req, res) => {
 // --- 4. ĐĂNG XUẤT (LOGOUT) ---
 export const logout = async (req, res) => {
     try {
-        const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+        const token = req.cookies.refreshToken || req.body.refreshToken;
 
-        // Vô hiệu hóa token trong DB
-        if (refreshToken) {
-            await pool.query('UPDATE users SET refresh_token = NULL WHERE refresh_token = $1', [refreshToken]);
+        if (token) {
+            await pool.query('UPDATE users SET refresh_token = NULL WHERE refresh_token = $1', [token]);
         }
 
-        res.clearCookie("refreshToken");
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+        });
+        
         res.status(200).json({ message: "Đã đăng xuất thành công. Hẹn gặp lại Demi!" });
     } catch (error) {
         res.status(500).json({ error: error.message });
