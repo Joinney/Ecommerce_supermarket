@@ -47,7 +47,7 @@ export default function Home() {
 
   return (
     /* 🚀 pt-[75px] Đã được cập nhật để nội dung hít sát Header */
-    <div className="space-y-12 pb-20 bg-white font-sans pt-[58px]">
+    <div className="space-y-12 pb-20 bg-white font-sans pt-[10px]">
       
       {/* 1. HERO SECTION */}
       <div className="px-6 md:px-10 pt-4 flex flex-col md:flex-row items-start justify-between gap-6">
