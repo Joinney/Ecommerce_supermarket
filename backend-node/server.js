@@ -6,16 +6,18 @@ import path from 'path';
 import session from 'express-session';
 import passport from 'passport';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv'; // Nhớ nạp biến môi trường ngay từ đầu
+import dotenv from 'dotenv';
+import fs from 'fs'; // Thêm fs để tự động tạo thư mục nếu thiếu
 
 // Nạp config .env
 dotenv.config();
 
-// Import cấu hình & routes
+// --- IMPORT ROUTES ---
 import './configs/Auth/passport.js'; 
 import authRoutes from "./routes/Auth/authRoutes.js"; 
 import forgotRoutes from "./routes/Auth/ForgotRoutes.js";
 import googleRoutes from './routes/GoogleRoutes.js';
+import profileRoutes from "./routes/User/profileRoutes.js"; 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,9 +26,16 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000; 
 
-// 1. CẤU HÌNH CORS (Bản fix mạnh tay cho Demi)
+// --- TỰ ĐỘNG TẠO THƯ MỤC UPLOADS NẾU CHƯA CÓ ---
+const uploadDir = path.join(__dirname, 'public/uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    console.log("📁 Đã tạo thư mục public/uploads để lưu ảnh đại diện.");
+}
+
+// 1. CẤU HÌNH CORS
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173", // Nên chỉ định rõ để an toàn
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'token']
@@ -34,39 +43,39 @@ app.use(cors({
 
 // 2. MIDDLEWARE CƠ BẢN
 app.use(express.json()); 
-app.use(express.urlencoded({ extended: true })); // Thêm cái này để xử lý form data
+app.use(express.urlencoded({ extended: true })); 
 app.use(cookieParser()); 
 
-// 3. CẤU HÌNH SESSION (Cực kỳ quan trọng để Google Auth hoạt động)
-// Khi chạy trên Render hoặc có Proxy, phải set proxy: true
-app.set('trust proxy', 1); 
-
+// 3. CẤU HÌNH SESSION
 app.use(session({
     secret: process.env.SESSION_SECRET || 'secret',
     resave: false,
-    saveUninitialized: false, // Để false để tránh tạo session trống liên tục
-    proxy: true, // Cho phép session đi qua proxy (Render/Cloudflare)
+    saveUninitialized: false,
+    proxy: true,
     cookie: { 
         secure: process.env.NODE_ENV === 'production', 
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Cần thiết cho Cross-site redirect
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 24 * 60 * 60 * 1000 
     }
 }));
 
-// 4. KHỞI TẠO PASSPORT (Phải nằm SAU session)
+// 4. KHỞI TẠO PASSPORT
 app.use(passport.initialize());
 app.use(passport.session());
 
-// 5. LOGGING ĐỂ DEBUG
+// 5. LOGGING DEBUG
 app.use((req, res, next) => {
     console.log(`[${new Date().toLocaleTimeString()}] ${req.method} -> ${req.url}`);
     next();
 });
 
-// 6. PHỤC VỤ FILE TĨNH (PUBLIC)
+// 6. CẤU HÌNH PHỤC VỤ FILE TĨNH (Rất quan trọng để hiện ảnh)
+// Dòng này giúp truy cập ảnh qua: http://localhost:5000/uploads/ten-anh.jpg
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 7. CÁC ROUTE API
+// --- 7. ĐĂNG KÝ CÁC ROUTE API ---
+app.use('/api/profile', profileRoutes); // Khớp với api.get("/profile/hoso") ở Frontend
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', forgotRoutes);
 app.use('/api/auth', googleRoutes);
@@ -76,6 +85,7 @@ app.use((req, res, next) => {
     if (req.url.startsWith('/api')) {
         return res.status(404).json({ message: "API endpoint không tồn tại!" });
     }
+    // Chỉ gửi file index.html nếu không phải là yêu cầu API
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

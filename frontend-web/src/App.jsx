@@ -9,7 +9,7 @@ import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import Profile from "./pages/Profile/Profile";
-
+import { useNavigate, Link, useLocation } from "react-router-dom";
 /**
  * 1. MAIN LAYOUT
  */
@@ -50,14 +50,11 @@ const AuthLayout = () => (
  * 3. APP ROUTES (Sử dụng màn hình chờ màu trắng)
  */
 const AppRoutes = () => {
-  const { loading } = useContext(AuthContext);
+  const { loading, user } = useContext(AuthContext); // Giả sử AuthContext có biến user
 
-  // Khi đang kiểm tra Auth, Render một màn hình trắng tinh
-  // Giúp loại bỏ hoàn toàn hiện tượng chớp đen khi chuyển Layout
   if (loading) {
     return (
       <div className="fixed inset-0 bg-white z-[9999] flex items-center justify-center">
-        {/* Demi có thể thêm một Logo mờ hoặc Spinner cực nhỏ màu xanh ở đây nếu thích */}
         <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -66,6 +63,7 @@ const AppRoutes = () => {
   return (
     <Router>
       <Routes>
+        {/* Protected Routes: Nếu không có user thì có thể bọc thêm logic Redirect ở đây */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/profile" element={<Profile />} />

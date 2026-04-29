@@ -4,7 +4,6 @@ import pool from '../../configs/database.js';
 
 // --- HÀM TẠO TOKEN ---
 const generateTokens = (user) => {
-    // Sử dụng biến môi trường hoặc giá trị mặc định để tránh lỗi 500
     const accessToken = jwt.sign(
         { id: user.user_id, role: user.role },
         process.env.JWT_ACCESS_SECRET || 'vdt_secret_2026',
@@ -34,10 +33,10 @@ export const signup = async (req, res) => {
         const query = `
             INSERT INTO users (
                 username, password_hash, email, full_name, 
-                phone_number, address, gender, birthday, role, status
+                phone_number, address, gender, birthday, role, status, avatar_url
             ) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Buyer', 'active') 
-            RETURNING user_id, username, email, full_name;
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Buyer', 'active', NULL) 
+            RETURNING user_id, username, email, full_name, avatar_url;
         `;
         
         const values = [username, passwordHash, email, full_name, phone, address, gender, birth_date];
@@ -56,11 +55,11 @@ export const signup = async (req, res) => {
 
 // --- 2. ĐĂNG NHẬP (SIGNIN) ---
 export const signin = async (req, res) => {
-    const { username, password } = req.body; // 'username' này có thể là email gửi từ Web
+    const { username, password } = req.body;
     try {
-        // Tìm theo username HOẶC email để khớp với giao diện Web của Demi
+        // --- CẬP NHẬT: Đảm bảo lấy trường avatar_url từ Database ---
         const userResult = await pool.query(
-            'SELECT * FROM users WHERE username = $1 OR email = $1', 
+            'SELECT user_id, username, password_hash, email, role, full_name, avatar_url FROM users WHERE username = $1 OR email = $1', 
             [username]
         );
         
@@ -86,25 +85,27 @@ export const signin = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
-        res.json({ 
-            message: "Chào mừng Demi trở lại!", 
+        // --- CẬP NHẬT: Trả về đầy đủ object user bao gồm avatar_url ---
+       res.status(200).json({
+            message: "Chào mừng Demi trở lại!",
             token: accessToken,
-            refreshToken: refreshToken, 
-            user: { 
+            refreshToken: refreshToken,
+            user: {
                 id: user.user_id,
-                username: user.username, 
-                email: user.email, 
-                role: user.role, 
-                full_name: user.full_name 
-            } 
-        });
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                full_name: user.full_name,
+                avatar_url: user.avatar_url // <--- DEMI PHẢI THÊM DÒNG NÀY VÀO ĐÂY
+            }
+            });
     } catch (error) {
-        console.error("Signin Error:", error); // Log ra Terminal để debug
+        console.error("Signin Error:", error);
         res.status(500).json({ error: "Lỗi hệ thống, kiểm tra lại biến môi trường!" });
     }
 };
 
-// --- 3. LÀM MỚI TOKEN (REFRESH TOKEN) ---
+// --- 3. LÀM MỚI TOKEN ---
 export const refreshToken = async (req, res) => {
     const token = req.cookies.refreshToken || req.body.refreshToken;
 
@@ -132,7 +133,7 @@ export const refreshToken = async (req, res) => {
     }
 };
 
-// --- 4. ĐĂNG XUẤT (LOGOUT) ---
+// --- 4. ĐĂNG XUẤT ---
 export const logout = async (req, res) => {
     try {
         const token = req.cookies.refreshToken || req.body.refreshToken;

@@ -1,47 +1,57 @@
 import axios from 'axios';
 
-/**
- * TỰ ĐỘNG NHẬN DIỆN MÔI TRƯỜNG:
- * - Local: Dùng API localhost:5000
- * - Production: Dùng API trên Render
- */
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 const api = axios.create({
     baseURL: isLocalhost 
         ? 'http://localhost:5000/api' 
         : 'https://ecommerce-supermarket-k691.onrender.com/api',
-    withCredentials: true // Duy trì Cookie để hệ thống Refresh Token hoạt động
+    withCredentials: true 
 });
 
 /**
- * INTERCEPTOR CHO REQUEST:
- * Tự động đính kèm Access Token vào Header mỗi khi gửi yêu cầu
+ * INTERCEPTOR CHO REQUEST: 
+ * Demi hãy đảm bảo luôn đọc localStorage MỚI NHẤT mỗi khi gửi request.
  */
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-        // Sử dụng key 'token' đồng bộ với cấu hình CORS của Backend Demi
-        config.headers.token = `Bearer ${token}`;
-    }
-    return config;
+  const token = localStorage.getItem("token");
+  
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`; 
+  }
+  
+  // Mẹo: Thêm log này để Demi kiểm tra trong Console xem 
+  // lúc bị 403 thì thực tế Token có được gửi đi không.
+  // console.log("Request sent with token:", !!token); 
+  
+  return config;
 }, (error) => {
-    return Promise.reject(error);
+  return Promise.reject(error);
 });
 
 /**
  * INTERCEPTOR CHO RESPONSE:
- * Xử lý tập trung các lỗi trả về (như hết hạn phiên làm việc)
  */
 api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        // Nếu lỗi 401 (Hết hạn token), Demi có thể xử lý xóa local tại đây nếu muốn
-        if (error.response && error.response.status === 401) {
-            console.warn("Phiên làm việc đã hết hạn.");
-        }
-        return Promise.reject(error);
+  (response) => response,
+  (error) => {
+    // CHỈ logout nếu đó là lỗi xác thực THẬT SỰ
+    // Tránh trường hợp đang Login Google (URL có token) mà bị redirect về /login oan
+    const isAuthError = error.response && (error.response.status === 401 || error.response.status === 403);
+    const isGoogleRedirect = window.location.search.includes("token=");
+
+    if (isAuthError && !isGoogleRedirect) {
+      console.warn("Lỗi xác thực, đang dọn dẹp hệ thống...");
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Nếu không phải trang login thì mới redirect về login
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'; 
+      }
     }
+    return Promise.reject(error);
+  }
 );
 
 export default api;

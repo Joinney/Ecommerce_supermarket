@@ -26,30 +26,35 @@ export default function Login() {
     }, [user, navigate]);
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError("");
-        setLoading(true);
-        
-        try {
-            const result = await login(username, password);
-            if (result.success) {
-                // CHỐT HẠ: Dùng window.location.href để ép reload trang chủ
-                // Cách này giúp dứt điểm lỗi màn hình đen trên Render/Nginx
-                window.location.href = "/"; 
-            } else {
-                setError(result.message || "Email hoặc mật khẩu không đúng");
-            }
-        } catch (err) {
-            setError("Lỗi kết nối server. Vui lòng thử lại sau.");
-        } finally {
-            setLoading(false);
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    
+    try {
+        const result = await login(username, password);
+        if (result.success) {
+            // ĐẢM BẢO TOKEN ĐÃ ĐƯỢC LƯU
+            // Thường thì AuthContext.login đã làm việc này, 
+            // nhưng ép reload ở đây là cực kỳ an toàn cho hệ thống.
+            window.location.href = "/"; 
+        } else {
+            setError(result.message || "Email hoặc mật khẩu không đúng");
         }
-    };
+    } catch (err) {
+        setError("Lỗi kết nối server. Vui lòng thử lại sau.");
+    } finally {
+        setLoading(false);
+    }
+};
 
     const handleGoogleLogin = () => {
-        const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    setLoading(true); // Hiển thị trạng thái đang xử lý
+    const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    // Thêm một khoảng trễ cực nhỏ để hiện Spinner nếu muốn
+    setTimeout(() => {
         window.location.href = `${apiBaseUrl}/api/auth/google`;
-    };
+    }, 500);
+};
 
     return (
         <div className="fixed inset-0 h-screen w-screen flex bg-white overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] z-[9999]">
