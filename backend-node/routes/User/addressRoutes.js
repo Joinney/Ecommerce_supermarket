@@ -53,6 +53,11 @@ router.post('/', verifyToken, async (req, res) => {
     const client = await pool.connect();
     try {
         const userId = req.user.id;
+        // Kiểm tra xem body có rỗng không
+        if (!req.body.receiver_name) {
+            return res.status(400).json({ success: false, message: "Thiếu thông tin người nhận!" });
+        }
+
         const { 
             receiver_name, receiver_phone, province_id, province_name, 
             district_id, district_name, ward_code, ward_name, 
@@ -61,8 +66,10 @@ router.post('/', verifyToken, async (req, res) => {
 
         await client.query('BEGIN');
 
-        // Nếu đặt làm mặc định, hủy tất cả mặc định cũ của user này
-        if (is_default) {
+        // Ép kiểu is_default về boolean chuẩn để tránh lỗi DB
+        const defaultStatus = is_default === true || is_default === 1;
+
+        if (defaultStatus) {
             await client.query('UPDATE user_addresses SET is_default = false WHERE user_id = $1', [userId]);
         }
 
@@ -74,8 +81,11 @@ router.post('/', verifyToken, async (req, res) => {
             RETURNING *`;
         
         const result = await client.query(insertQuery, [
-            userId, receiver_name, receiver_phone, province_id, province_name,
-            district_id, district_name, ward_code, ward_name, detail_address, is_default, address_type
+            userId, receiver_name, receiver_phone, 
+            province_id || 0, province_name || '',
+            district_id || 0, district_name || '', 
+            ward_code || '', ward_name || '', 
+            detail_address, defaultStatus, address_type || 'home'
         ]);
 
         await client.query('COMMIT');
@@ -83,7 +93,7 @@ router.post('/', verifyToken, async (req, res) => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error("Error adding address:", error.message);
-        res.status(500).json({ success: false, message: "Lỗi Server khi thêm địa chỉ" });
+        res.status(500).json({ success: false, message: "Lỗi Server: " + error.message });
     } finally {
         client.release();
     }
@@ -93,7 +103,7 @@ router.post('/', verifyToken, async (req, res) => {
 router.put('/:id', verifyToken, async (req, res) => {
     const client = await pool.connect();
     try {
-        const addressId = req.params.id;
+        const addressId = req.params.id; // Bạn đang dùng tên biến này
         const userId = req.user.id;
         const { 
             receiver_name, receiver_phone, province_id, province_name, 
@@ -118,7 +128,9 @@ router.put('/:id', verifyToken, async (req, res) => {
         const result = await client.query(updateQuery, [
             receiver_name, receiver_phone, province_id, province_name,
             district_id, district_name, ward_code, ward_name, detail_address, 
-            is_default, address_type, address_id, userId
+            is_default, address_type, 
+            addressId, // SỬA TẠI ĐÂY: Đổi address_id thành addressId cho khớp với khai báo phía trên
+            userId
         ]);
 
         if (result.rows.length === 0) {

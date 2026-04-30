@@ -9,7 +9,7 @@ import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import Profile from "./pages/Profile/Profile";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+
 /**
  * 1. MAIN LAYOUT
  */

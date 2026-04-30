@@ -1,7 +1,7 @@
 import { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from "lucide-react";
 
 export default function Login() {
     const [username, setUsername] = useState("");
@@ -26,41 +26,58 @@ export default function Login() {
     }, [user, navigate]);
 
     const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    
-    try {
-        const result = await login(username, password);
-        if (result.success) {
-            // ĐẢM BẢO TOKEN ĐÃ ĐƯỢC LƯU
-            // Thường thì AuthContext.login đã làm việc này, 
-            // nhưng ép reload ở đây là cực kỳ an toàn cho hệ thống.
-            window.location.href = "/"; 
-        } else {
-            setError(result.message || "Email hoặc mật khẩu không đúng");
+        e.preventDefault();
+        setError("");
+        setLoading(true);
+        
+        // 1. Dọn dẹp sạch sẽ rác cũ để tránh lỗi "invalid signature"
+        localStorage.clear(); 
+        
+        try {
+            const result = await login(username, password);
+            
+            if (result.success) {
+                // 2. ÉP GHI DỮ LIỆU VÀO STORAGE NGAY LẬP TỨC
+                // Kiểm tra tên biến trả về từ Backend (accessToken hoặc token)
+                const token = result.accessToken || result.token;
+                
+                if (token) {
+                    localStorage.setItem('token', token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    
+                    // 3. Sử dụng window.location.href để "làm tươi" hoàn toàn state ứng dụng
+                    // giúp Header và Profile nhận Token mới nhất 100%
+                    window.location.href = "/"; 
+                } else {
+                    setError("Không nhận được mã xác thực từ server.");
+                }
+            } else {
+                setError(result.message || "Email hoặc mật khẩu không đúng");
+            }
+        } catch (err) {
+            console.error("Login logic error:", err);
+            setError("Lỗi kết nối server. Vui lòng thử lại sau.");
+        } finally {
+            setLoading(false);
         }
-    } catch (err) {
-        setError("Lỗi kết nối server. Vui lòng thử lại sau.");
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
     const handleGoogleLogin = () => {
-    setLoading(true); // Hiển thị trạng thái đang xử lý
-    const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-    // Thêm một khoảng trễ cực nhỏ để hiện Spinner nếu muốn
-    setTimeout(() => {
-        window.location.href = `${apiBaseUrl}/api/auth/google`;
-    }, 500);
-};
+        setLoading(true);
+        // Xóa rác trước khi qua Google để tránh xung đột session
+        localStorage.clear();
+        const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        setTimeout(() => {
+            window.location.href = `${apiBaseUrl}/api/auth/google`;
+        }, 500);
+    };
 
     return (
-        <div className="fixed inset-0 h-screen w-screen flex bg-white overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] z-[9999]">
+        // Đổi overflow-hidden thành overflow-y-auto để mobile không bị cắt mất form
+        <div className="fixed inset-0 h-screen w-screen flex bg-white overflow-y-auto font-['Plus_Jakarta_Sans',sans-serif] z-[9999]">
             
             {/* TRÁI: HERO SECTION */}
-            <section className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 xl:p-16 text-white border-none shrink-0 overflow-hidden">
+            <section className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 xl:p-16 text-white border-none shrink-0 overflow-hidden sticky top-0 h-screen">
                 <div className="absolute inset-0 z-0">
                     <img 
                         src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=2000" 
@@ -70,7 +87,7 @@ export default function Login() {
                     <div className="absolute inset-0 bg-[#006c49]/80 mix-blend-multiply"></div>
                 </div>
 
-                <div className="relative z-10 space-y-6 max-w-xl">
+                <div className="relative z-10 space-y-6 max-w-xl text-left">
                     <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-[#006c49] shadow-xl">
                         <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
                             <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8.13,20C11,20 13.85,18.08 15,15.27C16.15,18.08 19,20 21.87,20C22.36,20 22.86,19.87 23.34,19.7L24.29,22L26.18,21.34C24.1,16.17 22,10 13,8L15,3L13,2L11,7L13,8M8.13,18C7,18 6,17.43 5.4,16.43C5.94,15.05 6.5,13.62 7.07,12.18C8.28,12.04 9.14,12.56 9.61,13.72C10.08,14.89 9.87,16.22 8.13,18M21.87,18C20.13,16.22 19.92,14.89 20.39,13.72C20.86,12.56 21.72,12.04 22.93,12.18C23.5,13.62 24.06,15.05 24.6,16.43C24,17.43 23,18 21.87,18Z"/>
@@ -81,7 +98,7 @@ export default function Login() {
                         <span className="text-white/90">delivered.</span>
                     </h1>
                     <p className="text-sm xl:text-lg opacity-90 leading-relaxed font-medium max-w-md">
-                        Join thousands of happy shoppers who choose FreshCart for their daily premium groceries.
+                        Join thousands of happy shoppers who choose Demi Mart for their daily premium groceries.
                     </p>
                 </div>
 
@@ -96,7 +113,7 @@ export default function Login() {
             </section>
 
             {/* PHẢI: LOGIN FORM */}
-            <section className="w-full lg:w-1/2 h-full flex flex-col items-center justify-center p-6 xl:p-20 bg-white shrink-0 overflow-hidden relative">
+            <section className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 xl:p-20 bg-white min-h-screen relative shrink-0">
                 
                 <Link 
                     to="/" 
@@ -122,7 +139,7 @@ export default function Login() {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-1.5 relative text-left">
-                            <label className="text-[10px] xl:text-xs font-bold text-slate-700 uppercase tracking-widest ml-1">Email Address</label>
+                            <label className="text-[10px] xl:text-xs font-bold text-slate-700 uppercase tracking-widest ml-1">Email / Username</label>
                             <div className="relative group">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#006c49] z-10 transition-colors" size={18} />
                                 <input 

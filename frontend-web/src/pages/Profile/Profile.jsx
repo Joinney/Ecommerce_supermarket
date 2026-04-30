@@ -33,6 +33,20 @@ export default function App() {
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   const [loading, setLoading] = useState(true);
 
+  // --- STATE QUẢN LÝ MODAL ĐỊA CHỈ ---
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState(null); 
+  const [addressForm, setAddressForm] = useState({
+    receiver_name: "",
+    receiver_phone: "",
+    province_name: "",
+    district_name: "",
+    ward_name: "",
+    detail_address: "",
+    is_default: false,
+    address_type: "home"
+  });
+
   // 1. TỰ ĐỘNG LẤY DỮ LIỆU HỒ SƠ TỪ DATABASE
   useEffect(() => {
     const fetchProfile = async () => {
@@ -69,6 +83,75 @@ export default function App() {
     }
   };
 
+  // --- LOGIC XỬ LÝ MODAL ---
+  const handleOpenAddModal = () => {
+    setEditingAddressId(null);
+    setAddressForm({
+      receiver_name: profile?.full_name || "",
+      receiver_phone: profile?.phone_number || "",
+      province_name: "", district_name: "", ward_name: "",
+      detail_address: "", is_default: addresses.length === 0, address_type: "home"
+    });
+    setIsAddressModalOpen(true);
+  };
+
+  const handleOpenEditModal = (addr) => {
+    setEditingAddressId(addr.address_id);
+    setAddressForm({ ...addr, is_default: Boolean(addr.is_default) });
+    setIsAddressModalOpen(true);
+  };
+
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    try {
+      // Ép kiểu is_default về số (1/0) để tránh lỗi Database PostgreSQL
+      const payload = { ...addressForm, is_default: addressForm.is_default ? 1 : 0 };
+      
+      const res = editingAddressId 
+        ? await api.put(`/addresses/${editingAddressId}`, payload)
+        : await api.post("/addresses", payload);
+
+      if (res.data.success) {
+        showToast(editingAddressId ? "Cập nhật thành công!" : "Đã thêm địa chỉ!");
+        setIsAddressModalOpen(false);
+        fetchAddresses();
+      }
+    } catch (error) { 
+        console.error("Lỗi API:", error.response?.data);
+        showToast("Lỗi xử lý địa chỉ", "error"); 
+    }
+  };
+
+  // HÀM THIẾT LẬP MẶC ĐỊNH TRỰC TIẾP (Sửa lỗi null constraint)
+  const handleSetDefault = async (addrId) => {
+    try {
+      const targetAddr = addresses.find(a => a.address_id === addrId);
+      if (!targetAddr) return;
+
+      // Gửi đầy đủ thông tin cũ để không vi phạm NOT NULL, chỉ đổi is_default
+      const payload = { ...targetAddr, is_default: 1 };
+      const res = await api.put(`/addresses/${addrId}`, payload);
+
+      if (res.data.success) {
+        showToast("Đã thiết lập mặc định!");
+        fetchAddresses();
+      }
+    } catch (error) {
+      showToast("Không thể thiết lập mặc định", "error");
+    }
+  };
+
+  const handleDeleteAddress = async (id) => {
+    if (!window.confirm("Bạn có chắc muốn xóa địa chỉ này?")) return;
+    try {
+      const res = await api.delete(`/addresses/${id}`);
+      if (res.data.success) {
+        showToast("Đã xóa địa chỉ!");
+        fetchAddresses();
+      }
+    } catch (error) { showToast("Lỗi khi xóa", "error"); }
+  };
+
   // 3. HÀM LƯU THÔNG TIN HỒ SƠ
   const handleSaveProfile = async () => {
     try {
@@ -98,9 +181,6 @@ export default function App() {
         if (response.data.success) {
             const newUrl = response.data.avatarUrl;
             setProfile(prev => ({ ...prev, avatar_url: newUrl }));
-            const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
-            savedUser.avatar_url = newUrl; 
-            localStorage.setItem('user', JSON.stringify(savedUser));
             if (updateUser) {
                 updateUser({ avatar_url: newUrl });
             }
@@ -120,7 +200,6 @@ export default function App() {
     if (!url || url === "" || url.includes('unsplash.com')) {
        return `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.full_name || 'User')}&background=006c49&color=fff`;
     }
-    if (url.startsWith('http')) return `${url}?t=${new Date().getTime()}`; 
     return `${API_BASE_URL}${url.startsWith('/') ? url : '/' + url}?t=${new Date().getTime()}`; 
   };
 
@@ -171,6 +250,68 @@ export default function App() {
   return (
     <div className="w-full bg-[#f0f2f5] font-sans text-slate-700 min-h-screen transition-all relative selection:bg-[#006c49] selection:text-white pb-8 text-left">
       
+      {/* --- MODAL ĐỊA CHỈ --- */}
+      {isAddressModalOpen && (
+        <div className="fixed inset-0 z-[10005] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-fadeIn">
+          <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-toastIn border border-slate-100">
+            <div className="p-6 border-b flex justify-between items-center bg-white">
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+                {editingAddressId ? "Chỉnh sửa địa chỉ" : "Thêm địa chỉ mới"}
+              </h3>
+              <button onClick={() => setIsAddressModalOpen(false)} className="text-slate-300 hover:text-red-500 transition-all"><X size={20}/></button>
+            </div>
+            
+            <form onSubmit={handleSaveAddress} className="p-8 space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Người nhận</label>
+                  <input required className="w-full bg-[#f8fafc] border border-slate-100 p-3.5 rounded-2xl text-sm font-bold outline-none focus:border-[#006c49] transition-all" value={addressForm.receiver_name} onChange={e => setAddressForm({...addressForm, receiver_name: e.target.value})} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">SĐT</label>
+                  <input required className="w-full bg-[#f8fafc] border border-slate-100 p-3.5 rounded-2xl text-sm font-bold outline-none focus:border-[#006c49] transition-all" value={addressForm.receiver_phone} onChange={e => setAddressForm({...addressForm, receiver_phone: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Địa chỉ chi tiết</label>
+                <textarea required className="w-full bg-[#f8fafc] border border-slate-100 p-3.5 rounded-2xl text-sm font-bold outline-none focus:border-[#006c49] transition-all h-24 resize-none" value={addressForm.detail_address} onChange={e => setAddressForm({...addressForm, detail_address: e.target.value})} />
+              </div>
+
+              <div className="space-y-3">
+                <input placeholder="Tỉnh / Thành phố" className="w-full bg-[#f8fafc] border border-slate-100 p-3.5 rounded-2xl text-sm font-bold outline-none focus:border-[#006c49]" value={addressForm.province_name} onChange={e => setAddressForm({...addressForm, province_name: e.target.value})} />
+                <div className="grid grid-cols-2 gap-4">
+                   <input placeholder="Quận / Huyện" className="w-full bg-[#f8fafc] border border-slate-100 p-3.5 rounded-2xl text-sm font-bold outline-none focus:border-[#006c49]" value={addressForm.district_name} onChange={e => setAddressForm({...addressForm, district_name: e.target.value})} />
+                   <input placeholder="Phường / Xã" className="w-full bg-[#f8fafc] border border-slate-100 p-3.5 rounded-2xl text-sm font-bold outline-none focus:border-[#006c49]" value={addressForm.ward_name} onChange={e => setAddressForm({...addressForm, ward_name: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex gap-2">
+                  {['home', 'office'].map(type => (
+                    <button key={type} type="button" onClick={() => setAddressForm({...addressForm, address_type: type})} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${addressForm.address_type === type ? 'bg-[#006c49] text-white border-[#006c49]' : 'bg-white text-slate-400 border-slate-100'}`}>
+                      {type === 'home' ? 'Nhà riêng' : 'Công ty'}
+                    </button>
+                  ))}
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" className="hidden" checked={addressForm.is_default} onChange={e => setAddressForm({...addressForm, is_default: e.target.checked})} />
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${addressForm.is_default ? 'bg-[#006c49] border-[#006c49]' : 'border-slate-200'}`}>
+                    {addressForm.is_default && <CheckCircle2 size={12} className="text-white"/>}
+                  </div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mặc định</span>
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setIsAddressModalOpen(false)} className="flex-1 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] text-slate-400 hover:bg-slate-50 transition-all">Đóng</button>
+                <button type="submit" className="flex-1 bg-[#006c49] text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-[#006c49]/20 hover:scale-[1.02] active:scale-95 transition-all">Lưu thông tin</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* 1. MOBILE HEADER */}
       <div className="md:hidden sticky top-0 z-[100] bg-white border-b border-slate-100 p-4 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
@@ -223,7 +364,7 @@ export default function App() {
                     <button
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl font-bold text-sm transition-all ${activeTab === item.id ? "bg-[#006c49] text-white shadow-lg" : "text-slate-500 hover:bg-slate-50 hover:text-[#006c49]"}`}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl font-bold text-sm transition-all ${activeTab === item.id ? "bg-[#006c49] text-white shadow-lg shadow-[#006c49]/20" : "text-slate-500 hover:bg-slate-50 hover:text-[#006c49]"}`}
                     >
                       <span className={activeTab === item.id ? "text-white" : "text-slate-300"}>{item.icon}</span>
                       {item.label}
@@ -253,25 +394,20 @@ export default function App() {
                 <CreditCard className="absolute -right-4 -bottom-4 w-20 h-20 opacity-10 -rotate-12" />
               </div>
               
-              {/* WIDGET THƯỞNG - NÚT ĐỔI NGAY NẰM BÊN PHẢI */}
-              <div className="bg-white rounded-none md:rounded-[28px] p-4 shadow-sm border border-slate-100 flex items-center h-auto md:h-[100px]">
-                <div className="flex items-center justify-between w-full gap-2">
-                  <div className="flex flex-col justify-center">
-                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 whitespace-nowrap">
-                      <Star size={12} fill="#fea619" className="text-[#fea619]"/> Thưởng
-                    </p>
-                    <div className="mt-1">
-                      <span className="text-lg md:text-xl font-black tabular-nums leading-none whitespace-nowrap">
-                        1.250 <span className="text-[8px] font-bold text-slate-400 uppercase">Xu</span>
-                      </span>
-                    </div>
+              <div className="bg-white rounded-none md:rounded-[28px] p-4 shadow-sm border border-slate-100 flex flex-row md:flex-col justify-between items-center md:items-stretch h-auto md:h-[100px]">
+                <div className="flex items-center justify-between w-full gap-2 md:block">
+                  <div className="flex items-center gap-2 md:justify-between">
+                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 whitespace-nowrap"><Star size={12} fill="#fea619" className="text-[#fea619]"/> Thưởng</p>
+                    <span 
+                      onClick={() => showToast("Hệ thống đang bảo trì")}
+                      className="text-[8px] font-black text-[#006c49] cursor-pointer hover:underline uppercase"
+                    >
+                      Đổi ngay
+                    </span>
                   </div>
-                  <button 
-                    onClick={() => showToast("Hệ thống đang bảo trì")}
-                    className="text-[8px] font-black text-[#006c49] border border-[#006c49]/20 px-3 py-1.5 rounded-lg uppercase hover:bg-[#006c49] hover:text-white transition-all active:scale-95"
-                  >
-                    Đổi ngay
-                  </button>
+                  <div className="flex items-center gap-3 md:block md:mt-1">
+                    <span className="text-lg md:text-xl font-black tabular-nums leading-none whitespace-nowrap">1.250 <span className="text-[8px] font-bold text-slate-400 uppercase">Xu</span></span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -306,75 +442,96 @@ export default function App() {
 
               <div className="px-5 md:px-8 lg:px-12 pb-10 pt-6 md:pt-8 animate-fadeIn flex-1">
                 
-                {/* --- TAB HỒ SƠ --- */}
-                {activeTab === "profile" && (
-                  <div className="space-y-8">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-50 pb-4 text-left">
-                      <h2 className="text-xl font-black text-slate-900 leading-tight tracking-tight">Hồ sơ cá nhân</h2>
-                      <button onClick={handleSaveProfile} className="hidden md:block bg-[#006c49] text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg hover:scale-[1.02] active:scale-95 transition-all">Lưu thay đổi</button>
-                    </div>
+                                {/* --- TAB HỒ SƠ --- */}
+{activeTab === "profile" && (
+  <div className="space-y-8 flex flex-col h-full">
+    <div className="flex flex-row justify-between items-center gap-4 border-b border-slate-50 pb-4 text-left">
+      <h2 className="text-xl font-black text-slate-900 leading-tight tracking-tight">Hồ sơ cá nhân</h2>
+      
+      {/* Nút này sẽ CHỈ HIỆN trên Desktop (md:block) */}
+      <button 
+        onClick={handleSaveProfile} 
+        className="hidden md:block bg-[#006c49] text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-[#006c49]/20 hover:scale-[1.02] active:scale-95 transition-all"
+      >
+        Lưu thay đổi
+      </button>
+    </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                      <div className="lg:col-span-2 space-y-6 text-left">
-                        <div className="grid grid-cols-3 items-center gap-4 border-b border-slate-50 pb-2">
-                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tên đăng nhập</label>
-                          <div className="col-span-2 font-bold text-slate-800 text-sm py-2">{profile.username}</div>
-                        </div>
-                        
-                        <div className="grid grid-cols-3 items-center gap-4">
-                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Họ và tên</label>
-                          <input type="text" value={profile.full_name || ""} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
-                        </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      {/* Cột trái & giữa: Form nhập liệu */}
+      <div className="lg:col-span-2 space-y-6 text-left order-2 lg:order-1">
+        <div className="grid grid-cols-3 items-center gap-4 border-b border-slate-50 pb-2">
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tên đăng nhập</label>
+          <div className="col-span-2 font-bold text-slate-800 text-sm py-2">{profile.username}</div>
+        </div>
+        
+        <div className="grid grid-cols-3 items-center gap-4">
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Họ và tên</label>
+          <input type="text" value={profile.full_name || ""} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
+        </div>
 
-                        <div className="grid grid-cols-3 items-center gap-4">
-                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Email</label>
-                          <input type="email" value={profile.email || ""} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
-                        </div>
+        <div className="grid grid-cols-3 items-center gap-4">
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Email</label>
+          <input type="email" value={profile.email || ""} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
+        </div>
 
-                        <div className="grid grid-cols-3 items-center gap-4">
-                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Số điện thoại</label>
-                          <input type="text" value={profile.phone_number || ""} onChange={(e) => setProfile({...profile, phone_number: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
-                        </div>
+        <div className="grid grid-cols-3 items-center gap-4">
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Số điện thoại</label>
+          <input type="text" value={profile.phone_number || ""} onChange={(e) => setProfile({...profile, phone_number: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
+        </div>
 
-                        <div className="grid grid-cols-3 items-center gap-4 pt-1">
-                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Giới tính</label>
-                          <div className="col-span-2 flex gap-6">
-                            {["Nam", "Nữ", "Khác"].map((gender) => (
-                              <label key={gender} className="flex items-center gap-2 cursor-pointer group text-xs font-bold text-slate-600">
-                                <input type="radio" name="gender" checked={profile.gender === gender} onChange={() => setProfile({...profile, gender: gender})} className="w-4 h-4 accent-[#006c49]" /> {gender}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
+        <div className="grid grid-cols-3 items-center gap-4 pt-1">
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Giới tính</label>
+          <div className="col-span-2 flex gap-6">
+            {["Nam", "Nữ", "Khác"].map((gender) => (
+              <label key={gender} className="flex items-center gap-2 cursor-pointer group text-xs font-bold text-slate-600">
+                <input type="radio" name="gender" checked={profile.gender === gender} onChange={() => setProfile({...profile, gender: gender})} className="w-4 h-4 accent-[#006c49]" /> {gender}
+              </label>
+            ))}
+          </div>
+        </div>
 
-                        <div className="grid grid-cols-3 items-center gap-4 pt-1 text-xs font-bold">
-                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ngày sinh</label>
-                          <input type="date" value={profile.birthday ? profile.birthday.split('T')[0] : ""} onChange={(e) => setProfile({...profile, birthday: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm outline-none focus:border-[#006c49]" />
-                        </div>
-                      </div>
+        <div className="grid grid-cols-3 items-center gap-4 pt-1 text-xs font-bold">
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ngày sinh</label>
+          <input type="date" value={profile.birthday ? profile.birthday.split('T')[0] : ""} onChange={(e) => setProfile({...profile, birthday: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm outline-none focus:border-[#006c49]" />
+        </div>
+      </div>
 
-                      <div className="flex flex-col items-center justify-start pt-2 order-first lg:order-last">
-                        <div className="bg-[#f8fafc] rounded-[32px] p-8 border-2 border-slate-100 border-dashed w-full flex flex-col items-center text-center">
-                          <div className="relative mb-4 group">
-                            <img src={getAvatarSrc(profile.avatar_url)} className="w-28 h-28 rounded-[36px] object-cover border-4 border-white shadow-xl group-hover:scale-105 transition-all" alt="Avatar" onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=User&background=006c49&color=fff`; }} />
-                            <label htmlFor="avatar-up" className="absolute -bottom-1 -right-1 bg-white p-2.5 rounded-xl shadow-lg border border-slate-100 text-[#006c49] cursor-pointer hover:scale-110 transition-all"><Camera size={16} /></label>
-                          </div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase">Ảnh đại diện</p>
-                          <input type="file" id="avatar-up" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+      {/* Cột phải: Avatar */}
+      <div className="flex flex-col items-center justify-start pt-2 order-1 lg:order-2">
+        <div className="bg-[#f8fafc] rounded-[32px] p-8 border-2 border-slate-100 border-dashed w-full flex flex-col items-center text-center">
+          <div className="relative mb-4 group">
+            <img src={getAvatarSrc(profile.avatar_url)} className="w-28 h-28 rounded-[36px] object-cover border-4 border-white shadow-xl group-hover:scale-105 transition-all" alt="Avatar" />
+            <label htmlFor="avatar-up" className="absolute -bottom-1 -right-1 bg-white p-2.5 rounded-xl shadow-lg border border-slate-100 text-[#006c49] cursor-pointer hover:scale-110 transition-all"><Camera size={16} /></label>
+          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase">Ảnh đại diện</p>
+          <input type="file" id="avatar-up" className="hidden" accept="image/*" onChange={handleAvatarChange} />
+        </div>
+      </div>
+    </div>
 
-                {/* --- TAB ĐỊA CHỈ: HIỂN THỊ DỮ LIỆU THẬT --- */}
+    {/* NÚT LƯU THAY ĐỔI DÀNH CHO MOBILE (Nằm ở dưới cùng) */}
+    <div className="md:hidden pt-10 pb-4">
+      <button 
+        onClick={handleSaveProfile} 
+        className="w-full bg-[#006c49] text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-[#006c49]/20 active:scale-95 transition-all"
+      >
+        Lưu thay đổi hồ sơ
+      </button>
+      
+    </div>
+  </div>
+)}
+
+
+                {/* --- TAB ĐỊA CHỈ: ĐÃ HOÀN THIỆN NÚT MẶC ĐỊNH BÊN NGOÀI --- */}
                 {activeTab === "addresses" && (
                   <div className="space-y-6">
                     <div className="flex justify-between items-center border-b border-slate-50 pb-4 text-left">
                       <h2 className="text-xl font-black text-slate-900 leading-tight tracking-tight">Địa chỉ của tôi</h2>
                       <button 
-                        onClick={() => showToast("Tính năng thêm địa chỉ đang được cập nhật", "info")}
-                        className="bg-[#006c49] text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase flex items-center gap-2 shadow-lg shadow-[#006c49]/20"
+                        onClick={handleOpenAddModal}
+                        className="bg-[#006c49] text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase flex items-center gap-2 shadow-lg shadow-[#006c49]/20 hover:scale-105 transition-all"
                       >
                         <Plus size={14} /> Thêm địa chỉ mới
                       </button>
@@ -383,26 +540,43 @@ export default function App() {
                     <div className="space-y-4">
                       {addresses.length > 0 ? (
                         addresses.map((addr) => (
-                          <div key={addr.address_id} className="p-5 rounded-3xl bg-white border border-slate-100 flex justify-between items-start hover:shadow-md transition-all text-left">
-                            <div className="space-y-1">
+                          <div key={addr.address_id} className="p-5 rounded-3xl bg-white border border-slate-100 flex justify-between items-center hover:shadow-md transition-all text-left">
+                            <div className="space-y-1 flex-1">
                               <div className="flex items-center gap-3">
                                 <span className="font-black text-slate-900 text-sm">{addr.receiver_name}</span>
                                 <span className="text-slate-300">|</span>
                                 <span className="text-slate-500 text-xs font-bold">{addr.receiver_phone}</span>
-                                {addr.is_default && (
+                                {Boolean(addr.is_default) && (
                                   <span className="text-[8px] bg-red-50 text-red-500 px-2 py-0.5 rounded border border-red-100 font-black uppercase">Mặc định</span>
                                 )}
                               </div>
                               <p className="text-xs text-slate-600 font-medium">{addr.detail_address}</p>
-                              <p className="text-xs text-slate-400 font-bold uppercase tracking-tight">
+                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
                                 {`${addr.ward_name}, ${addr.district_name}, ${addr.province_name}`}
                               </p>
                             </div>
-                            <div className="flex gap-4">
-                              <button className="text-[10px] font-black text-[#006c49] uppercase hover:underline">Cập nhật</button>
-                              {!addr.is_default && (
-                                <button className="text-[10px] font-black text-red-500 uppercase hover:underline">Xóa</button>
-                              )}
+
+                            {/* CỘT THAO TÁC BÊN PHẢI */}
+                            <div className="flex flex-col items-end gap-3 shrink-0 ml-4">
+                              <div className="flex gap-4">
+                                <button onClick={() => handleOpenEditModal(addr)} className="text-[10px] font-black text-[#006c49] uppercase hover:underline">Cập nhật</button>
+                                {!Boolean(addr.is_default) && (
+                                  <button onClick={() => handleDeleteAddress(addr.address_id)} className="text-[10px] font-black text-red-500 uppercase hover:underline">Xóa</button>
+                                )}
+                              </div>
+                              
+                              {/* NÚT THIẾT LẬP MẶC ĐỊNH BÊN NGOÀI */}
+                              <button 
+                                disabled={Boolean(addr.is_default)}
+                                onClick={() => handleSetDefault(addr.address_id)}
+                                className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-tighter border transition-all ${
+                                  Boolean(addr.is_default) 
+                                  ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' 
+                                  : 'bg-white text-slate-700 border-slate-200 hover:border-[#006c49] hover:text-[#006c49]'
+                                }`}
+                              >
+                                {Boolean(addr.is_default) ? 'Đang là mặc định' : 'Thiết lập mặc định'}
+                              </button>
                             </div>
                           </div>
                         ))
@@ -422,16 +596,16 @@ export default function App() {
                     <h2 className="text-xl font-black text-slate-900 border-b border-slate-50 pb-4">Thông báo mới nhất</h2>
                     <div className="space-y-3">
                        {notifications.map(noti => (
-                         <div key={noti.id} className={`flex gap-4 p-4 rounded-2xl border transition-all cursor-pointer ${noti.unread ? 'bg-[#f0f9f6] border-[#006c49]/10' : 'bg-white border-slate-100'}`}>
-                           <div className={`w-11 h-11 rounded-xl shrink-0 flex items-center justify-center ${noti.type === 'order' ? 'bg-blue-50 text-blue-500' : 'bg-amber-50 text-amber-500'}`}>
-                              {noti.type === 'order' ? <Package size={20}/> : <Ticket size={20}/>}
+                         <div key={noti.id} className={`flex gap-4 p-4 rounded-2xl border transition-all cursor-pointer bg-white border-slate-100`}>
+                           <div className={`w-11 h-11 rounded-xl shrink-0 flex items-center justify-center bg-slate-50 text-[#006c49]`}>
+                              <Package size={20}/>
                            </div>
-                           <div className="flex-1">
-                              <div className="flex justify-between items-start">
+                           <div className="flex-1 text-left">
+                             <div className="flex justify-between items-start">
                                  <h5 className="font-bold text-slate-900 text-sm truncate pr-4">{noti.title}</h5>
                                  <span className="text-[10px] text-slate-400 font-bold">{noti.time}</span>
-                              </div>
-                              <p className="text-xs text-slate-500 mt-1">{noti.desc}</p>
+                             </div>
+                             <p className="text-xs text-slate-500 mt-1">{noti.desc}</p>
                            </div>
                          </div>
                        ))}
@@ -445,15 +619,14 @@ export default function App() {
                     <h2 className="text-xl font-black text-slate-900 border-b border-slate-50 pb-4">Lịch sử đơn hàng</h2>
                     <div className="space-y-4">
                        {orders.map(order => (
-                         <div key={order.id} className="p-4 rounded-3xl bg-white border border-slate-100 flex gap-4 items-center hover:shadow-md transition-all group">
+                         <div key={order.id} className="p-4 rounded-3xl bg-white border border-slate-100 flex gap-4 items-center group transition-all">
                            <img src={order.img} className="w-16 h-16 rounded-2xl object-cover border border-slate-100" alt="prod" />
-                           <div className="flex-1">
-                              <div className="flex justify-between">
+                           <div className="flex-1 text-left">
+                             <div className="flex justify-between">
                                  <span className="text-xs font-black text-slate-900 uppercase tracking-widest">Mã: #{order.id}</span>
                                  <span className={`text-[9px] px-2.5 py-0.5 rounded-full font-black uppercase bg-emerald-50 text-emerald-600`}>{order.status}</span>
-                              </div>
-                              <p className="text-[10px] font-bold text-slate-400 mt-1">{order.date}</p>
-                              <p className="text-base font-black text-[#006c49]">{order.total}</p>
+                             </div>
+                             <p className="text-base font-black text-[#006c49] mt-1">{order.total}</p>
                            </div>
                            <ChevronRight size={20} className="text-slate-300 group-hover:text-[#006c49] transition-all"/>
                          </div>
@@ -476,10 +649,10 @@ export default function App() {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-        .animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }
-        .animate-toastIn { animation: toastIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+        .animate-toastIn { animation: toastIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
