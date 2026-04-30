@@ -17,7 +17,8 @@ export default function ProductDetail() {
   useEffect(() => {
     window.scrollTo(0, 0);
     setLoading(true);
-    fetch(`http://localhost:5000/api/products/${id}`)
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    fetch(`${API_BASE_URL}/api/products/${id}`)
       .then(res => res.json())
       .then(data => {
         const productData = Array.isArray(data) ? data[0] : data;
