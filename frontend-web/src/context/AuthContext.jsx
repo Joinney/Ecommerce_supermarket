@@ -1,78 +1,90 @@
-import { createContext, useState, useEffect, useCallback } from "react";
+import { createContext, useState, useEffect, useCallback, useMemo } from "react";
 import api from "../api/axios";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    // 1. KHỞI TẠO TỨC THÌ: Header sẽ có ảnh ngay khi F5, không bị nhảy màu
     const [user, setUser] = useState(() => {
         const savedUser = localStorage.getItem("user");
         const token = localStorage.getItem("token");
         if (savedUser && token) {
-          try {
-            return JSON.parse(savedUser);
-          } catch (e) {
-            return null;
-          }
+            try { return JSON.parse(savedUser); } catch (e) { return null; }
         }
         return null;
     });
 
-    const [loading, setLoading] = useState(true); 
+    const [loading, setLoading] = useState(true);
     const [authActionLoading, setAuthActionLoading] = useState(false);
 
-    // 2. CẬP NHẬT NHANH: Dùng khi Demi đổi ảnh đại diện hoặc đổi tên ở trang Profile
-    const updateUser = useCallback((newData) => {
-        setUser(prevUser => {
-            const updatedUser = { ...prevUser, ...newData };
-            localStorage.setItem("user", JSON.stringify(updatedUser));
-            return updatedUser;
-        });
+    // --- HÀM CẬP NHẬT USER (Dùng chung cho toàn app) ---
+    const updateUser = useCallback((userData) => {
+        if (!userData) {
+            setUser(null);
+            localStorage.removeItem("user");
+        } else {
+            setUser(prev => ({ ...prev, ...userData }));
+            const currentSaved = JSON.parse(localStorage.getItem("user") || "{}");
+            localStorage.setItem("user", JSON.stringify({ ...currentSaved, ...userData }));
+        }
     }, []);
 
-    // 3. XỬ LÝ XÁC THỰC (PHIÊN BẢN CHỐNG VĂNG GOOGLE)
-    const checkAuth = useCallback(() => {
+    // --- HÀM LẤY PROFILE MỚI NHẤT TỪ SERVER ---
+    const fetchFreshProfile = useCallback(async () => {
+        try {
+            const res = await api.get("/profile/hoso");
+            if (res.data.success) {
+                updateUser(res.data.data);
+            }
+        } catch (error) {
+            console.error("❌ Lỗi Fetch Profile:", error);
+            // Nếu lỗi 401/403 ở đây thì thường interceptor đã xử lý logout
+        }
+    }, [updateUser]);
+
+    const checkAuth = useCallback(async () => {
         const params = new URLSearchParams(window.location.search);
         const tokenFromUrl = params.get("token");
         const userFromUrl = params.get("user");
 
-        // --- ƯU TIÊN XỬ LÝ GOOGLE AUTH ---
-        if (tokenFromUrl && userFromUrl) {
-            try {
+        try {
+            // --- 1. XỬ LÝ GOOGLE AUTH (Nếu có params trên URL) ---
+            if (tokenFromUrl && userFromUrl) {
                 const userData = JSON.parse(decodeURIComponent(userFromUrl));
                 
-                // Lưu vào máy trước khi set state
                 localStorage.setItem("token", tokenFromUrl);
-                localStorage.setItem("user", JSON.stringify(userData));
+                api.defaults.headers.common['Authorization'] = `Bearer ${tokenFromUrl}`;
                 
-                setUser(userData);
-                
-                // FIX LỖI EXTENSION: Đợi Extension xử lý xong mới dọn URL
-                setTimeout(() => {
-                    window.history.replaceState({}, document.title, "/");
-                }, 300);
+                updateUser(userData);
 
+                // Lấy profile đầy đủ ngay lập tức
+                await fetchFreshProfile();
+
+                // Dọn dẹp URL sạch sẽ
+                window.history.replaceState({}, document.title, window.location.pathname);
                 setLoading(false);
-                return; 
-            } catch (e) {
-                console.error("❌ Lỗi dữ liệu Google:", e);
+                return;
             }
-        }
 
-        // Logic giữ login khi F5 trang thường
-        const token = localStorage.getItem("token");
-        if (!token) {
-            setUser(null);
+            // --- 2. GIỮ ĐĂNG NHẬP KHI F5 ---
+            const token = localStorage.getItem("token");
+            if (token) {
+                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                // Gọi fetch để đồng bộ dữ liệu mới nhất (ví dụ avatar vừa đổi)
+                await fetchFreshProfile();
+            } else {
+                updateUser(null);
+            }
+        } catch (e) {
+            console.error("❌ Lỗi xác thực:", e);
+        } finally {
+            setLoading(false);
         }
-        
-        setLoading(false); 
-    }, []);
+    }, [fetchFreshProfile, updateUser]);
 
     useEffect(() => {
         checkAuth();
     }, [checkAuth]);
 
-    // 4. LOGIC ĐĂNG NHẬP (Đã khớp với Backend trả về avatar_url)
     const login = async (username, password) => {
         setAuthActionLoading(true);
         try {
@@ -81,8 +93,9 @@ export const AuthProvider = ({ children }) => {
             
             if (token) {
                 localStorage.setItem("token", token);
-                localStorage.setItem("user", JSON.stringify(userData));
-                setUser(userData);
+                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                updateUser(userData);
+                await fetchFreshProfile(); // Đồng bộ profile đầy đủ
                 return { success: true };
             }
             return { success: false, message: "Không nhận được token!" };
@@ -93,43 +106,24 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // 5. ĐĂNG XUẤT (An toàn cho bộ nhớ)
-    const logout = async () => {
+    const logout = useCallback(async () => {
         try {
             await api.post("/auth/logout").catch(() => {}); 
         } finally {
-            setUser(null);
-            localStorage.removeItem("user");
+            updateUser(null);
             localStorage.removeItem("token");
-            // Xóa sạch lịch sử để tránh Extension nhảy về URL cũ có Token lỗi
-            window.location.replace("/login");
+            delete api.defaults.headers.common['Authorization'];
+            window.location.href = "/login"; // Dùng href để reset toàn bộ state app cho sạch
         }
-    };
+    }, [updateUser]);
 
-    // 6. ĐĂNG KÝ
-    const register = async (data) => {
-        setAuthActionLoading(true);
-        try {
-            const res = await api.post("/auth/signup", data);
-            return { success: true, message: res.data.message };
-        } catch (e) {
-            return { success: false, message: e.response?.data?.message || "Lỗi đăng ký!" };
-        } finally {
-            setAuthActionLoading(false);
-        }
-    };
+    // Dùng useMemo để tránh re-render provider không cần thiết
+    const authValue = useMemo(() => ({
+        user, updateUser, login, logout, loading, authActionLoading
+    }), [user, updateUser, logout, loading, authActionLoading]);
 
     return (
-        <AuthContext.Provider value={{ 
-            user, 
-            setUser, 
-            updateUser, 
-            login, 
-            logout, 
-            register, 
-            loading, 
-            authActionLoading 
-        }}>
+        <AuthContext.Provider value={authValue}>
             {children}
         </AuthContext.Provider>
     );

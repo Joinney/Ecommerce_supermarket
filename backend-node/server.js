@@ -35,10 +35,10 @@ if (!fs.existsSync(uploadDir)) {
 
 // 1. CẤU HÌNH CORS
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173", // Đảm bảo port 5173 khớp với Vite/React của bạn
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'token']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Thêm OPTIONS
+    allowedHeaders: ['Content-Type', 'Authorization', 'token', 'x-access-token'] 
 }));
 
 // 2. MIDDLEWARE CƠ BẢN

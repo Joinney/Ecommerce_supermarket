@@ -11,19 +11,18 @@ const api = axios.create({
 
 /**
  * INTERCEPTOR CHO REQUEST: 
- * Demi hãy đảm bảo luôn đọc localStorage MỚI NHẤT mỗi khi gửi request.
  */
 api.interceptors.request.use((config) => {
+  // 1. Luôn lấy token mới nhất từ localStorage trước mỗi request
   const token = localStorage.getItem("token");
   
   if (token) {
     config.headers.Authorization = `Bearer ${token}`; 
   }
   
-  // Mẹo: Thêm log này để Demi kiểm tra trong Console xem 
-  // lúc bị 403 thì thực tế Token có được gửi đi không.
-  // console.log("Request sent with token:", !!token); 
-  
+  // 2. Fix lỗi CORS cho một số trình duyệt (Optional)
+  config.headers['Content-Type'] = config.headers['Content-Type'] || 'application/json';
+
   return config;
 }, (error) => {
   return Promise.reject(error);
@@ -35,21 +34,33 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // CHỈ logout nếu đó là lỗi xác thực THẬT SỰ
-    // Tránh trường hợp đang Login Google (URL có token) mà bị redirect về /login oan
-    const isAuthError = error.response && (error.response.status === 401 || error.response.status === 403);
-    const isGoogleRedirect = window.location.search.includes("token=");
+    const { response: res } = error;
 
-    if (isAuthError && !isGoogleRedirect) {
-      console.warn("Lỗi xác thực, đang dọn dẹp hệ thống...");
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+    // CHỈ xử lý logout nếu gặp lỗi 401 (Hết hạn/Không hợp lệ) 
+    // Tránh 403 (Cấm truy cập) vì đôi khi 403 là do quyền hạn (Role) 
+    // chứ không phải do Token chết.
+    if (res && res.status === 401) {
       
-      // Nếu không phải trang login thì mới redirect về login
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'; 
+      // Kiểm tra xem có phải đang trong quá trình Login Google không
+      const isGoogleProcessing = window.location.search.includes("token=");
+
+      if (!isGoogleProcessing) {
+        console.warn("Phiên đăng nhập hết hạn.");
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+
+        // Chỉ chuyển hướng nếu không phải đang ở trang login
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/auth-success') {
+           window.location.href = '/login';
+        }
       }
     }
+
+    // Nếu gặp 403, chỉ thông báo lỗi thay vì đá user ra ngoài
+    if (res && res.status === 403) {
+      console.error("❌ Bạn không có quyền truy cập tài nguyên này (403 Forbidden)");
+    }
+
     return Promise.reject(error);
   }
 );

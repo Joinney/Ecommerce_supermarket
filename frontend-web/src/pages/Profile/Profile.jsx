@@ -334,17 +334,19 @@ export default function App() {
                           />
                         </div>
 
-                        {/* EMAIL */}
+                        {/* EMAIL - Cho phép chỉnh sửa */}
                         <div className="grid grid-cols-3 items-center gap-4 text-left">
                           <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Email</label>
                           <input 
                             type="email" 
+                            // Gán giá trị từ state profile
                             value={profile.email || ""} 
-                            onChange={(e) => setProfile({...profile, email: e.target.value})}
+                            // QUAN TRỌNG: Cập nhật state khi người dùng gõ phím
+                            onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                            placeholder="nhanvien@vi du.com"
                             className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none transition-all" 
                           />
                         </div>
-
                         {/* SỐ ĐIỆN THOẠI */}
                         <div className="grid grid-cols-3 items-center gap-4 text-left">
                           <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Số điện thoại</label>

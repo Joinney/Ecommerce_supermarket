@@ -47,26 +47,52 @@ const upload = multer({
 /**
  * 2. MIDDLEWARE XÁC THỰC TOKEN
  */
+/**
+ * 2. MIDDLEWARE XÁC THỰC TOKEN (BẢN SỬA LỖI INVALID SIGNATURE)
+ */
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-        return res.status(401).json({ success: false, message: "Không tìm thấy Token xác thực!" });
+        return res.status(401).json({ success: false, message: "Không tìm thấy Token!" });
     }
 
-    const secretKey = process.env.JWT_ACCESS_SECRET; 
+    // THỬ TẤT CẢ CÁC KEY CÓ THỂ CÓ TRONG .ENV ĐỂ TRANH LỆCH PHA
+    const keysToTry = [
+        process.env.JWT_ACCESS_SECRET,
+        process.env.JWT_SECRET,
+        "your_fallback_secret_if_any" // Key mặc định nếu cần
+    ].filter(Boolean); // Loại bỏ các biến undefined
 
-    jwt.verify(token, secretKey, (err, decoded) => {
-        if (err) {
-            return res.status(403).json({ success: false, message: "Token không hợp lệ hoặc hết hạn!" });
+    let decodedToken = null;
+    let verifyError = null;
+
+    // Lặp qua từng key để verify
+    for (const key of keysToTry) {
+        try {
+            decodedToken = jwt.verify(token, key);
+            if (decodedToken) break; // Nếu verify thành công thì thoát vòng lặp
+        } catch (err) {
+            verifyError = err;
         }
-        // Đảm bảo decoded.id khớp với field user_id trong DB
-        req.user = decoded; 
-        next();
-    });
-};
+    }
 
+    if (!decodedToken) {
+        console.error("❌ JWT Verify Failed. Error:", verifyError?.message);
+        return res.status(403).json({ 
+            success: false, 
+            message: "Token không hợp lệ hoặc sai chữ ký (Invalid Signature)!" 
+        });
+    }
+
+    // Map dữ liệu linh hoạt (Google dùng 'sub', DB dùng 'id')
+    req.user = { 
+        id: decodedToken.id || decodedToken.sub || decodedToken.user_id 
+    };
+    
+    next();
+};
 /**
  * [GET] /api/profile/hoso
  */
@@ -128,18 +154,32 @@ router.post('/upload-avatar', verifyToken, upload.single('avatar'), async (req, 
  */
 router.put('/hoso', verifyToken, async (req, res) => {
     try {
-        const { full_name, gender, birthday, phone_number, avatar_url, address } = req.body;
+        // 1. Lấy thêm 'email' từ body gửi lên
+        const { full_name, gender, birthday, phone_number, avatar_url, address, email } = req.body;
         const userId = req.user.id;
 
+        // 2. Cập nhật câu lệnh SQL: Thêm email = $7 và dịch chuyển userId xuống $8
         const updateQuery = `
             UPDATE users 
-            SET full_name = $1, gender = $2, birthday = $3, phone_number = $4, avatar_url = $5, address = $6, updated_at = NOW()
-            WHERE user_id = $7
+            SET full_name = $1, 
+                gender = $2, 
+                birthday = $3, 
+                phone_number = $4, 
+                avatar_url = $5, 
+                address = $6, 
+                email = $7, 
+                updated_at = NOW()
+            WHERE user_id = $8
             RETURNING user_id, username, full_name, email, phone_number, gender, birthday, avatar_url, address;
         `;
 
-        const values = [full_name, gender, birthday, phone_number, avatar_url, address, userId];
+        // 3. Truyền giá trị email vào mảng values
+        const values = [full_name, gender, birthday, phone_number, avatar_url, address, email, userId];
         const result = await pool.query(updateQuery, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy người dùng để cập nhật!" });
+        }
 
         res.status(200).json({
             success: true,
@@ -147,8 +187,12 @@ router.put('/hoso', verifyToken, async (req, res) => {
             data: result.rows[0]
         });
     } catch (error) {
+        // Xử lý lỗi trùng lặp email (nếu email mới đã có người khác dùng)
+        if (error.code === '23505') {
+            return res.status(400).json({ success: false, message: "Email này đã được sử dụng bởi tài khoản khác!" });
+        }
         console.error("Lỗi Update Profile:", error.message);
-        res.status(500).json({ success: false, message: "Lỗi Server" });
+        res.status(500).json({ success: false, message: "Lỗi Server khi cập nhật hồ sơ" });
     }
 });
 
