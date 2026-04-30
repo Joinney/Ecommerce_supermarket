@@ -19,6 +19,7 @@ import forgotRoutes from "./routes/Auth/ForgotRoutes.js";
 import googleRoutes from './routes/GoogleRoutes.js';
 import profileRoutes from "./routes/User/profileRoutes.js"; 
 import addressRoutes from './routes/User/addressRoutes.js';
+import productRoutes from './routes/Product/productRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +82,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/auth', forgotRoutes);
 app.use('/api/auth', googleRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/products', productRoutes);
 
 // 8. XỬ LÝ SPA & 404 API
 app.use((req, res, next) => {

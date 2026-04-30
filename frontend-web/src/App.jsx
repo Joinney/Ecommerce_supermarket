@@ -9,6 +9,7 @@ import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import Profile from "./pages/Profile/Profile";
+import ProductDetail from "./pages/Productdetail/ProductDetail"; // <--- Import trang chi tiết mới
 
 /**
  * 1. MAIN LAYOUT
@@ -47,10 +48,10 @@ const AuthLayout = () => (
 );
 
 /**
- * 3. APP ROUTES (Sử dụng màn hình chờ màu trắng)
+ * 3. APP ROUTES
  */
 const AppRoutes = () => {
-  const { loading, user } = useContext(AuthContext); // Giả sử AuthContext có biến user
+  const { loading, user } = useContext(AuthContext);
 
   if (loading) {
     return (
@@ -63,12 +64,17 @@ const AppRoutes = () => {
   return (
     <Router>
       <Routes>
-        {/* Protected Routes: Nếu không có user thì có thể bọc thêm logic Redirect ở đây */}
+        {/* Nhóm các trang có Header/Footer/Sidebar */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
+          
+          {/* Link chi tiết sản phẩm với ID động */}
+          <Route path="/product/:id" element={<ProductDetail />} />
+          
           <Route path="/profile" element={<Profile />} />
         </Route>
 
+        {/* Nhóm các trang Auth (Trắng toàn màn hình) */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
