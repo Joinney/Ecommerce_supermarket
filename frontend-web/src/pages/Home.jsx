@@ -80,8 +80,10 @@ export default function Home() {
   useEffect(() => {
     // Luôn cuộn lên đầu trang khi vào Home
     window.scrollTo(0, 0);
-
-    fetch('http://localhost:5000/api/products/all-products')
+    
+// Thay bằng:
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+fetch(`${API_BASE_URL}/api/products/all-products`)
       .then(res => res.json())
       .then(data => {
         setApiProducts(data);
