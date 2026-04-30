@@ -47,6 +47,13 @@ export default function App() {
     address_type: "home"
   });
 
+  // --- STATE QUẢN LÝ TAB BẢO MẬT (BỔ SUNG) ---
+  const [securityStep, setSecurityStep] = useState("verify-password"); // verify-password, forgot-password, otp-verify, reset-password
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+
   // 1. TỰ ĐỘNG LẤY DỮ LIỆU HỒ SƠ TỪ DATABASE
   useEffect(() => {
     const fetchProfile = async () => {
@@ -104,7 +111,6 @@ export default function App() {
   const handleSaveAddress = async (e) => {
     e.preventDefault();
     try {
-      // Ép kiểu is_default về số (1/0) để tránh lỗi Database PostgreSQL
       const payload = { ...addressForm, is_default: addressForm.is_default ? 1 : 0 };
       
       const res = editingAddressId 
@@ -122,16 +128,12 @@ export default function App() {
     }
   };
 
-  // HÀM THIẾT LẬP MẶC ĐỊNH TRỰC TIẾP (Sửa lỗi null constraint)
   const handleSetDefault = async (addrId) => {
     try {
       const targetAddr = addresses.find(a => a.address_id === addrId);
       if (!targetAddr) return;
-
-      // Gửi đầy đủ thông tin cũ để không vi phạm NOT NULL, chỉ đổi is_default
       const payload = { ...targetAddr, is_default: 1 };
       const res = await api.put(`/addresses/${addrId}`, payload);
-
       if (res.data.success) {
         showToast("Đã thiết lập mặc định!");
         fetchAddresses();
@@ -190,6 +192,72 @@ export default function App() {
         console.error(error);
     }
   };
+
+  // --- LOGIC BẢO MẬT ĐA BƯỚC (BỔ SUNG) ---
+  const handleVerifyCurrentPassword = async () => {
+    try {
+      const res = await api.post("/profile/verify-password", { password: currentPassword });
+      if (res.data.success) {
+        showToast("Xác thực thành công!");
+        setSecurityStep("reset-password");
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || "Mật khẩu không chính xác", "error");
+    }
+  };
+
+  const handleSendOTP = async () => {
+    try {
+      const res = await api.post("/auth/forgot-password", { email: profile.email });
+      if (res.data.success) {
+        showToast("Mã OTP đã gửi vào Email!");
+        setSecurityStep("otp-verify");
+      }
+    } catch (err) {
+      showToast("Lỗi gửi mã OTP", "error");
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    try {
+      const res = await api.post("/auth/verify-otp", { email: profile.email, otp: otpCode });
+      if (res.data.success) {
+        showToast("OTP hợp lệ!");
+        setSecurityStep("reset-password");
+      }
+    } catch (err) {
+      showToast("Mã OTP không đúng hoặc hết hạn", "error");
+    }
+  };
+
+const handleResetPassword = async () => {
+  if (newPassword !== confirmNewPassword) return showToast("Mật khẩu không khớp!", "error");
+  
+  try {
+    let res;
+    // KIỂM TRA LUỒNG:
+    if (otpCode) {
+      // LUỒNG 1: Quên mật khẩu (Có mã OTP) -> Gọi API Auth
+      res = await api.post("/auth/reset-password", { 
+        email: profile.email, 
+        otp: otpCode, 
+        newPassword 
+      });
+    } else {
+      // LUỒNG 2: Đổi mật khẩu trực tiếp (Vừa xác thực pass cũ xong) -> Gọi API Profile mới
+      res = await api.put("/profile/change-password", { newPassword });
+    }
+
+    if (res.data.success) {
+      showToast("Đổi mật khẩu thành công!");
+      setSecurityStep("verify-password");
+      // Reset form
+      setNewPassword(""); setConfirmNewPassword(""); setOtpCode(""); setCurrentPassword("");
+    }
+  } catch (err) {
+    showToast(err.response?.data?.message || "Lỗi cập nhật mật khẩu", "error");
+  }
+};
 
   const showToast = (msg, type = "success") => {
     setToast({ show: true, message: msg, type });
@@ -442,89 +510,82 @@ export default function App() {
 
               <div className="px-5 md:px-8 lg:px-12 pb-10 pt-6 md:pt-8 animate-fadeIn flex-1">
                 
-                                {/* --- TAB HỒ SƠ --- */}
-{activeTab === "profile" && (
-  <div className="space-y-8 flex flex-col h-full">
-    <div className="flex flex-row justify-between items-center gap-4 border-b border-slate-50 pb-4 text-left">
-      <h2 className="text-xl font-black text-slate-900 leading-tight tracking-tight">Hồ sơ cá nhân</h2>
-      
-      {/* Nút này sẽ CHỈ HIỆN trên Desktop (md:block) */}
-      <button 
-        onClick={handleSaveProfile} 
-        className="hidden md:block bg-[#006c49] text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-[#006c49]/20 hover:scale-[1.02] active:scale-95 transition-all"
-      >
-        Lưu thay đổi
-      </button>
-    </div>
+                {/* --- TAB HỒ SƠ --- */}
+                {activeTab === "profile" && (
+                  <div className="space-y-8 flex flex-col h-full">
+                    <div className="flex flex-row justify-between items-center gap-4 border-b border-slate-50 pb-4 text-left">
+                      <h2 className="text-xl font-black text-slate-900 leading-tight tracking-tight">Hồ sơ cá nhân</h2>
+                      <button 
+                        onClick={handleSaveProfile} 
+                        className="hidden md:block bg-[#006c49] text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-[#006c49]/20 hover:scale-[1.02] active:scale-95 transition-all"
+                      >
+                        Lưu thay đổi
+                      </button>
+                    </div>
 
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-      {/* Cột trái & giữa: Form nhập liệu */}
-      <div className="lg:col-span-2 space-y-6 text-left order-2 lg:order-1">
-        <div className="grid grid-cols-3 items-center gap-4 border-b border-slate-50 pb-2">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tên đăng nhập</label>
-          <div className="col-span-2 font-bold text-slate-800 text-sm py-2">{profile.username}</div>
-        </div>
-        
-        <div className="grid grid-cols-3 items-center gap-4">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Họ và tên</label>
-          <input type="text" value={profile.full_name || ""} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
-        </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                      <div className="lg:col-span-2 space-y-6 text-left order-2 lg:order-1">
+                        <div className="grid grid-cols-3 items-center gap-4 border-b border-slate-50 pb-2">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tên đăng nhập</label>
+                          <div className="col-span-2 font-bold text-slate-800 text-sm py-2">{profile.username}</div>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 items-center gap-4">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Họ và tên</label>
+                          <input type="text" value={profile.full_name || ""} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
+                        </div>
 
-        <div className="grid grid-cols-3 items-center gap-4">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Email</label>
-          <input type="email" value={profile.email || ""} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
-        </div>
+                        <div className="grid grid-cols-3 items-center gap-4">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Email</label>
+                          <input type="email" value={profile.email || ""} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
+                        </div>
 
-        <div className="grid grid-cols-3 items-center gap-4">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Số điện thoại</label>
-          <input type="text" value={profile.phone_number || ""} onChange={(e) => setProfile({...profile, phone_number: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
-        </div>
+                        <div className="grid grid-cols-3 items-center gap-4">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Số điện thoại</label>
+                          <input type="text" value={profile.phone_number || ""} onChange={(e) => setProfile({...profile, phone_number: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm focus:bg-white focus:border-[#006c49] outline-none" />
+                        </div>
 
-        <div className="grid grid-cols-3 items-center gap-4 pt-1">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Giới tính</label>
-          <div className="col-span-2 flex gap-6">
-            {["Nam", "Nữ", "Khác"].map((gender) => (
-              <label key={gender} className="flex items-center gap-2 cursor-pointer group text-xs font-bold text-slate-600">
-                <input type="radio" name="gender" checked={profile.gender === gender} onChange={() => setProfile({...profile, gender: gender})} className="w-4 h-4 accent-[#006c49]" /> {gender}
-              </label>
-            ))}
-          </div>
-        </div>
+                        <div className="grid grid-cols-3 items-center gap-4 pt-1">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Giới tính</label>
+                          <div className="col-span-2 flex gap-6">
+                            {["Nam", "Nữ", "Khác"].map((gender) => (
+                              <label key={gender} className="flex items-center gap-2 cursor-pointer group text-xs font-bold text-slate-600">
+                                <input type="radio" name="gender" checked={profile.gender === gender} onChange={() => setProfile({...profile, gender: gender})} className="w-4 h-4 accent-[#006c49]" /> {gender}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
 
-        <div className="grid grid-cols-3 items-center gap-4 pt-1 text-xs font-bold">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ngày sinh</label>
-          <input type="date" value={profile.birthday ? profile.birthday.split('T')[0] : ""} onChange={(e) => setProfile({...profile, birthday: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm outline-none focus:border-[#006c49]" />
-        </div>
-      </div>
+                        <div className="grid grid-cols-3 items-center gap-4 pt-1 text-xs font-bold">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ngày sinh</label>
+                          <input type="date" value={profile.birthday ? profile.birthday.split('T')[0] : ""} onChange={(e) => setProfile({...profile, birthday: e.target.value})} className="col-span-2 bg-[#f8fafc] p-3.5 rounded-xl border border-slate-100 font-bold text-slate-800 text-sm outline-none focus:border-[#006c49]" />
+                        </div>
+                      </div>
 
-      {/* Cột phải: Avatar */}
-      <div className="flex flex-col items-center justify-start pt-2 order-1 lg:order-2">
-        <div className="bg-[#f8fafc] rounded-[32px] p-8 border-2 border-slate-100 border-dashed w-full flex flex-col items-center text-center">
-          <div className="relative mb-4 group">
-            <img src={getAvatarSrc(profile.avatar_url)} className="w-28 h-28 rounded-[36px] object-cover border-4 border-white shadow-xl group-hover:scale-105 transition-all" alt="Avatar" />
-            <label htmlFor="avatar-up" className="absolute -bottom-1 -right-1 bg-white p-2.5 rounded-xl shadow-lg border border-slate-100 text-[#006c49] cursor-pointer hover:scale-110 transition-all"><Camera size={16} /></label>
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase">Ảnh đại diện</p>
-          <input type="file" id="avatar-up" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-        </div>
-      </div>
-    </div>
+                      <div className="flex flex-col items-center justify-start pt-2 order-1 lg:order-2">
+                        <div className="bg-[#f8fafc] rounded-[32px] p-8 border-2 border-slate-100 border-dashed w-full flex flex-col items-center text-center">
+                          <div className="relative mb-4 group">
+                            <img src={getAvatarSrc(profile.avatar_url)} className="w-28 h-28 rounded-[36px] object-cover border-4 border-white shadow-xl group-hover:scale-105 transition-all" alt="Avatar" />
+                            <label htmlFor="avatar-up" className="absolute -bottom-1 -right-1 bg-white p-2.5 rounded-xl shadow-lg border border-slate-100 text-[#006c49] cursor-pointer hover:scale-110 transition-all"><Camera size={16} /></label>
+                            <input type="file" id="avatar-up" className="hidden" accept="image/*" onChange={handleAvatarChange} />
+                          </div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase">Ảnh đại diện</p>
+                        </div>
+                      </div>
+                    </div>
 
-    {/* NÚT LƯU THAY ĐỔI DÀNH CHO MOBILE (Nằm ở dưới cùng) */}
-    <div className="md:hidden pt-10 pb-4">
-      <button 
-        onClick={handleSaveProfile} 
-        className="w-full bg-[#006c49] text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-[#006c49]/20 active:scale-95 transition-all"
-      >
-        Lưu thay đổi hồ sơ
-      </button>
-      
-    </div>
-  </div>
-)}
+                    <div className="md:hidden pt-10 pb-4">
+                      <button 
+                        onClick={handleSaveProfile} 
+                        className="w-full bg-[#006c49] text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-[#006c49]/20 active:scale-95 transition-all"
+                      >
+                        Lưu thay đổi hồ sơ
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-
-                {/* --- TAB ĐỊA CHỈ: ĐÃ HOÀN THIỆN NÚT MẶC ĐỊNH BÊN NGOÀI --- */}
+                {/* --- TAB ĐỊA CHỈ --- */}
                 {activeTab === "addresses" && (
                   <div className="space-y-6">
                     <div className="flex justify-between items-center border-b border-slate-50 pb-4 text-left">
@@ -556,7 +617,6 @@ export default function App() {
                               </p>
                             </div>
 
-                            {/* CỘT THAO TÁC BÊN PHẢI */}
                             <div className="flex flex-col items-end gap-3 shrink-0 ml-4">
                               <div className="flex gap-4">
                                 <button onClick={() => handleOpenEditModal(addr)} className="text-[10px] font-black text-[#006c49] uppercase hover:underline">Cập nhật</button>
@@ -565,7 +625,6 @@ export default function App() {
                                 )}
                               </div>
                               
-                              {/* NÚT THIẾT LẬP MẶC ĐỊNH BÊN NGOÀI */}
                               <button 
                                 disabled={Boolean(addr.is_default)}
                                 onClick={() => handleSetDefault(addr.address_id)}
@@ -584,6 +643,71 @@ export default function App() {
                         <div className="flex flex-col items-center justify-center py-20 gap-4 text-slate-300">
                           <MapPin size={40}/>
                           <p className="text-xs font-black uppercase tracking-widest text-center">Bạn chưa có địa chỉ nào</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* --- TAB BẢO MẬT: ĐA BƯỚC (BỔ SUNG) --- */}
+                {activeTab === "security" && (
+                  <div className="space-y-8 max-w-xl mx-auto animate-fadeIn text-center">
+                    <div className="border-b border-slate-50 pb-6 text-left">
+                      <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Bảo mật tài khoản</h2>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Quản lý mật khẩu và xác thực đa lớp</p>
+                    </div>
+
+                    <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm relative overflow-hidden">
+                      
+                      {/* BƯỚC 1: XÁC THỰC MẬT KHẨU CŨ */}
+                      {securityStep === "verify-password" && (
+                        <div className="space-y-6 animate-fadeIn">
+                          <div className="w-16 h-16 bg-[#e6f0ed] rounded-3xl flex items-center justify-center text-[#006c49] mx-auto"><ShieldCheck size={32}/></div>
+                          <div><h3 className="font-black text-slate-800 text-lg">Xác nhận danh tính</h3><p className="text-xs text-slate-500 font-medium">Nhập mật khẩu hiện tại để tiếp tục thiết lập bảo mật.</p></div>
+                          <div className="space-y-4">
+                            <input type="password" placeholder="••••••••" className="w-full bg-[#f8fafc] border border-slate-100 p-4 rounded-2xl text-center text-sm font-bold outline-none focus:border-[#006c49] transition-all" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
+                            <button onClick={handleVerifyCurrentPassword} className="w-full bg-[#006c49] text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-[#006c49]/20 active:scale-95 transition-all">Tiếp tục</button>
+                            <button onClick={() => setSecurityStep("forgot-password")} className="w-full text-[10px] font-black text-[#006c49] uppercase tracking-widest hover:underline">Bạn quên mật khẩu?</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* BƯỚC 2: QUÊN MẬT KHẨU (GỬI OTP) */}
+                      {securityStep === "forgot-password" && (
+                        <div className="space-y-6 animate-fadeIn">
+                          <button onClick={() => setSecurityStep("verify-password")} className="absolute top-6 left-6 text-slate-300 hover:text-slate-900"><ChevronRight size={20} className="rotate-180"/></button>
+                          <div className="w-16 h-16 bg-[#e6f0ed] rounded-3xl flex items-center justify-center text-[#006c49] mx-auto"><Mail size={32}/></div>
+                          <div><h3 className="font-black text-slate-800 text-lg">Khôi phục mật khẩu</h3><p className="text-xs text-slate-500 font-medium">Chúng tôi sẽ gửi mã OTP đến email đăng ký của bạn:<br/><b className="text-slate-900">{profile.email}</b></p></div>
+                          <button onClick={handleSendOTP} className="w-full bg-[#006c49] text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg active:scale-95 transition-all">Gửi mã OTP qua Email</button>
+                        </div>
+                      )}
+
+                      {/* BƯỚC 3: NHẬP MÃ OTP */}
+                      {securityStep === "otp-verify" && (
+                        <div className="space-y-6 animate-fadeIn">
+                          <button onClick={() => setSecurityStep("forgot-password")} className="absolute top-6 left-6 text-slate-300 hover:text-slate-900"><ChevronRight size={20} className="rotate-180"/></button>
+                          <div className="text-center space-y-2">
+                            <h3 className="font-black text-slate-800 text-lg">Xác thực OTP</h3>
+                            <p className="text-xs text-slate-500 font-medium">Nhập mã 6 chữ số vừa được gửi đến email của bạn</p>
+                          </div>
+                          <div className="flex justify-center">
+                            <input maxLength={6} className="w-44 bg-[#f8fafc] border border-slate-100 p-4 rounded-2xl text-center text-2xl font-black tracking-[0.5em] outline-none focus:border-[#006c49]" value={otpCode} onChange={e => setOtpCode(e.target.value)} />
+                          </div>
+                          <button onClick={handleVerifyOTP} className="w-full bg-[#006c49] text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg active:scale-95 transition-all">Xác thực mã</button>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">Không nhận được mã? <span className="text-[#006c49] cursor-pointer hover:underline" onClick={handleSendOTP}>Gửi lại ngay</span></p>
+                        </div>
+                      )}
+
+                      {/* BƯỚC 4: THIẾT LẬP MẬT KHẨU MỚI */}
+                      {securityStep === "reset-password" && (
+                        <div className="space-y-6 animate-fadeIn text-left">
+                          <button onClick={() => otpCode ? setSecurityStep("otp-verify") : setSecurityStep("verify-password")} className="flex items-center gap-2 text-slate-300 hover:text-slate-900 transition-all mb-2"><ChevronRight size={18} className="rotate-180"/><span className="text-[10px] font-black uppercase tracking-widest">Quay lại</span></button>
+                          <div><h3 className="font-black text-slate-800 text-lg">Đặt lại mật khẩu</h3><p className="text-xs text-slate-500 font-medium">Vui lòng chọn mật khẩu mạnh để bảo vệ tài khoản.</p></div>
+                          <div className="space-y-4">
+                            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mật khẩu mới</label><input type="password" placeholder="Tối thiểu 8 ký tự" className="w-full bg-[#f8fafc] border border-slate-100 p-4 rounded-2xl text-sm font-bold outline-none focus:border-[#006c49]" value={newPassword} onChange={e => setNewPassword(e.target.value)} /></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nhập lại mật khẩu</label><input type="password" placeholder="Xác nhận mật khẩu" className="w-full bg-[#f8fafc] border border-slate-100 p-4 rounded-2xl text-sm font-bold outline-none focus:border-[#006c49]" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} /></div>
+                            <button onClick={handleResetPassword} className="w-full bg-[#006c49] text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-[#006c49]/20 hover:scale-[1.02] active:scale-95 transition-all">Lưu mật khẩu mới</button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -613,7 +737,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* TAB ĐƠN HÀNG */}
+                {/* --- TAB ĐƠN HÀNG --- */}
                 {activeTab === "orders" && (
                   <div className="space-y-6 text-left">
                     <h2 className="text-xl font-black text-slate-900 border-b border-slate-50 pb-4">Lịch sử đơn hàng</h2>
@@ -636,7 +760,7 @@ export default function App() {
                 )}
 
                 {/* CÁC TAB KHÁC CHƯA CÓ GIAO DIỆN CHI TIẾT */}
-                {["security", "vouchers", "favorites"].includes(activeTab) && (
+                {["vouchers", "favorites"].includes(activeTab) && (
                   <div className="flex flex-col items-center justify-center py-20 gap-4 text-slate-300">
                     <Package size={40}/>
                     <p className="text-sm font-bold uppercase tracking-widest text-center">Dữ liệu cho {activeTab} đang cập nhật</p>

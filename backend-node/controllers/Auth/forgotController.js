@@ -77,3 +77,27 @@ export const resetPassword = async (req, res) => {
         res.status(500).json({ message: "Lỗi Server khi đổi mật khẩu!" });
     }
 };
+// Dùng khi user nhớ mật khẩu và muốn đổi mật khẩu mới trực tiếp
+export const verifyCurrentPassword = async (req, res) => {
+    const { password } = req.body;
+    const userId = req.user.id; // Lấy từ middleware verifyToken
+
+    try {
+        const user = await db.query("SELECT password_hash FROM users WHERE user_id = $1", [userId]);
+        
+        if (user.rows.length === 0) {
+            return res.status(404).json({ message: "Người dùng không tồn tại!" });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.rows[0].password_hash);
+        
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: "Mật khẩu hiện tại không chính xác!" });
+        }
+
+        res.json({ success: true, message: "Xác thực thành công!" });
+    } catch (err) {
+        console.error("Lỗi verify password:", err);
+        res.status(500).json({ message: "Lỗi hệ thống khi xác thực mật khẩu!" });
+    }
+};

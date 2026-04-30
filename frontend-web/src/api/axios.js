@@ -10,59 +10,54 @@ const api = axios.create({
 });
 
 /**
- * INTERCEPTOR CHO REQUEST: 
+ * INTERCEPTOR CHO REQUEST: Gửi Token đi
  */
 api.interceptors.request.use((config) => {
-  // 1. Luôn lấy token mới nhất từ localStorage trước mỗi request
-  const token = localStorage.getItem("token");
-  
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`; 
-  }
-  
-  // 2. Fix lỗi CORS cho một số trình duyệt (Optional)
-  config.headers['Content-Type'] = config.headers['Content-Type'] || 'application/json';
-
-  return config;
+    // 1. Lấy token và kiểm tra tính hợp lệ cơ bản (tránh gửi chuỗi "null"/"undefined")
+    const token = localStorage.getItem("token");
+    
+    if (token && token !== "null" && token !== "undefined") {
+        config.headers.Authorization = `Bearer ${token}`; 
+    }
+    
+    return config;
 }, (error) => {
-  return Promise.reject(error);
+    return Promise.reject(error);
 });
 
 /**
- * INTERCEPTOR CHO RESPONSE:
+ * INTERCEPTOR CHO RESPONSE: Xử lý lỗi hệ thống
  */
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const { response: res } = error;
+    (response) => response,
+    (error) => {
+        const { response: res } = error;
 
-    // CHỈ xử lý logout nếu gặp lỗi 401 (Hết hạn/Không hợp lệ) 
-    // Tránh 403 (Cấm truy cập) vì đôi khi 403 là do quyền hạn (Role) 
-    // chứ không phải do Token chết.
-    if (res && res.status === 401) {
-      
-      // Kiểm tra xem có phải đang trong quá trình Login Google không
-      const isGoogleProcessing = window.location.search.includes("token=");
+        // Xử lý dứt điểm lỗi 401 (Unauthorized) và 403 (Forbidden)
+        // Trong hệ thống của Demi, 403 thường do Token sai chữ ký (Invalid Signature) hoặc bị can thiệp
+        if (res && (res.status === 401 || res.status === 403)) {
+            
+            // Kiểm tra tránh vòng lặp nếu đang ở trang login
+            const isAuthPage = window.location.pathname === '/login' || 
+                               window.location.pathname === '/auth-success';
+            const isGoogleProcessing = window.location.search.includes("token=");
 
-      if (!isGoogleProcessing) {
-        console.warn("Phiên đăng nhập hết hạn.");
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+            if (!isAuthPage && !isGoogleProcessing) {
+                console.error(`❌ Lỗi xác thực (${res.status}): Đang tiến hành đăng xuất...`);
 
-        // Chỉ chuyển hướng nếu không phải đang ở trang login
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/auth-success') {
-           window.location.href = '/login';
+                // 1. Xóa sạch dữ liệu trong LocalStorage ngay lập tức
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                localStorage.clear(); // Xóa sạch mọi rác còn sót lại
+
+                // 2. ÉP TẢI LẠI TRANG HOẶC CHUYỂN HƯỚNG
+                // window.location.replace giúp xóa lịch sử chuyển hướng, tránh bấm Back quay lại lỗi
+                window.location.replace('/login');
+            }
         }
-      }
-    }
 
-    // Nếu gặp 403, chỉ thông báo lỗi thay vì đá user ra ngoài
-    if (res && res.status === 403) {
-      console.error("❌ Bạn không có quyền truy cập tài nguyên này (403 Forbidden)");
+        return Promise.reject(error);
     }
-
-    return Promise.reject(error);
-  }
 );
 
 export default api;
