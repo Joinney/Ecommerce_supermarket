@@ -1,8 +1,8 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
+import { useCart } from "../context/CartContext"; // 1. Tích hợp CartContext
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import Logo from "../assets/Demi Mart.png";
-import api from "../api/axios";
 import { 
   Globe, ChevronDown, Check, Search, LogOut, MapPin, 
   ShoppingCart, Calendar, User, Gift, Menu 
@@ -12,7 +12,8 @@ const isLocalhost = window.location.hostname === 'localhost' || window.location.
 const API_BASE_URL = isLocalhost ? 'http://localhost:5000' : 'https://ecommerce-supermarket-k691.onrender.com';
 
 export default function Header({ onOpenMenu }) {
-  const { user: authUser, setUser, logout } = useContext(AuthContext);
+  const { user: authUser, logout } = useContext(AuthContext);
+  const { cart } = useCart(); // 2. Lấy dữ liệu giỏ hàng thực tế
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -30,6 +31,7 @@ export default function Header({ onOpenMenu }) {
 
   useEffect(() => {
     if (authUser) setDisplayUser(authUser);
+    else setDisplayUser(null);
   }, [authUser]);
 
   // --- 2. LOGIC NGÀY THÁNG & ĐÓNG DROPDOWN ---
@@ -74,8 +76,8 @@ export default function Header({ onOpenMenu }) {
       await logout(); 
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = "/";
-    } catch (error) { window.location.href = "/"; }
+      navigate("/");
+    } catch (error) { navigate("/"); }
   };
 
   const isAuthPage = ["/login", "/signup", "/forgot-password"].includes(location.pathname);
@@ -98,7 +100,7 @@ export default function Header({ onOpenMenu }) {
         {!isAuthPage && (
           <div className="flex-1 max-w-xl relative group hidden sm:block min-h-[45px]">
             <input type="text" placeholder="Tìm sản phẩm..." className="w-full bg-[#f3f6f9] border-2 border-transparent py-2 md:py-2.5 pl-5 pr-12 rounded-full outline-none focus:bg-white focus:border-[#006c49] transition-all text-xs md:text-sm font-bold text-slate-700 shadow-inner" />
-            <button className="absolute right-1 top-1 bottom-1 w-10 md:w-12 flex items-center justify-center bg-[#006c49] text-white rounded-full">
+            <button className="absolute right-1 top-1 bottom-1 w-10 md:w-12 flex items-center justify-center bg-[#006c49] text-white rounded-full transition-transform active:scale-90">
               <Search size={16} strokeWidth={3} />
             </button>
           </div>
@@ -108,10 +110,10 @@ export default function Header({ onOpenMenu }) {
           
           {/* Bộ chọn ngôn ngữ */}
           <div className="relative" ref={langRef}>
-            <button onClick={() => setIsLangOpen(!isLangOpen)} className="flex items-center gap-1 text-slate-600 hover:text-[#006c49]">
+            <button onClick={() => setIsLangOpen(!isLangOpen)} className="flex items-center gap-1 text-slate-600 hover:text-[#006c49] transition-colors">
               <Globe size={18} />
               <span className="text-[11px] font-black uppercase hidden md:block">{currentLang.code}</span>
-              <ChevronDown size={12} className={`transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown size={12} className={`transition-transform duration-300 ${isLangOpen ? 'rotate-180' : ''}`} />
             </button>
             
             {isLangOpen && (
@@ -145,7 +147,7 @@ export default function Header({ onOpenMenu }) {
                 <div className="hidden lg:block text-left overflow-hidden">
                   <p className="text-[11px] font-black text-slate-900 leading-tight truncate max-w-[80px]">{displayUser.full_name}</p>
                 </div>
-                <button onClick={handleLogout} className="text-slate-300 hover:text-red-500 transition-all ml-1"><LogOut size={16}/></button>
+                <button onClick={handleLogout} className="text-slate-300 hover:text-red-500 transition-all ml-1 active:scale-90"><LogOut size={16}/></button>
               </div>
             ) : (
               <div className="flex items-center gap-1 text-slate-700 font-bold text-[12px] md:text-[14px] whitespace-nowrap">
@@ -159,13 +161,18 @@ export default function Header({ onOpenMenu }) {
             )}
           </div>
 
-          <button className="bg-[#006c49] text-white p-2 md:px-5 md:py-2.5 rounded-full md:rounded-2xl flex items-center gap-2 shadow-lg shadow-[#006c49]/20 active:scale-95 transition-all flex-shrink-0 min-w-[44px] md:min-w-[120px] justify-center">
+          {/* 3. NÚT GIỎ HÀNG: Kết nối Link và CartCount thực tế */}
+          <Link to="/cart" className="bg-[#006c49] text-white p-2 md:px-5 md:py-2.5 rounded-full md:rounded-2xl flex items-center gap-2 shadow-lg shadow-[#006c49]/20 active:scale-95 transition-all flex-shrink-0 min-w-[44px] md:min-w-[120px] justify-center group">
             <div className="relative">
-              <ShoppingCart size={18} strokeWidth={2.5} />
-              <span className="absolute -top-2 -right-2 bg-[#fea619] text-[#161b22] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#006c49]">2</span>
+              <ShoppingCart size={18} strokeWidth={2.5} className="group-hover:rotate-12 transition-transform" />
+              {cart.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-[#fea619] text-[#161b22] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#006c49] animate-bounce">
+                  {cart.length}
+                </span>
+              )}
             </div>
             <span className="text-[11px] font-black uppercase hidden lg:block tracking-widest">Giỏ hàng</span>
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -173,7 +180,7 @@ export default function Header({ onOpenMenu }) {
       <div className="h-9 md:h-10 bg-white border-b border-slate-100 px-3 md:px-10 flex items-center justify-between overflow-x-auto scrollbar-hide">
         <nav className="flex items-center gap-5 md:gap-8 whitespace-nowrap min-w-max">
           {["Toàn cầu+", "Mới về", "Bán chạy", "Ưu đãi"].map((item) => (
-            <Link key={item} to="/" className="text-[10px] md:text-[11px] font-black text-slate-500 hover:text-[#006c49] uppercase tracking-widest">{item}</Link>
+            <Link key={item} to="/" className="text-[10px] md:text-[11px] font-black text-slate-500 hover:text-[#006c49] uppercase tracking-widest transition-colors">{item}</Link>
           ))}
           <Link to="/" className="text-[10px] md:text-[11px] font-black text-[#a855f7] flex items-center gap-2 animate-pulse">
             <Gift size={14} /> Giới thiệu nhận $20!

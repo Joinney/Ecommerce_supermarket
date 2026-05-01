@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { AuthProvider, AuthContext } from "./context/AuthContext"; 
+import { CartProvider } from "./context/CartContext"; // 1. Import CartProvider
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Footer from "./components/Footer";
@@ -9,7 +10,8 @@ import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import Profile from "./pages/Profile/Profile";
-import ProductDetail from "./pages/Productdetail/ProductDetail"; // <--- Import trang chi tiết mới
+import ProductDetail from "./pages/Productdetail/ProductDetail";
+import Cart from "./pages/Giohang/Cart"; // 2. Import trang Cart mới tạo
 
 /**
  * 1. MAIN LAYOUT
@@ -51,7 +53,7 @@ const AuthLayout = () => (
  * 3. APP ROUTES
  */
 const AppRoutes = () => {
-  const { loading, user } = useContext(AuthContext);
+  const { loading } = useContext(AuthContext);
 
   if (loading) {
     return (
@@ -67,14 +69,12 @@ const AppRoutes = () => {
         {/* Nhóm các trang có Header/Footer/Sidebar */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
-          
-          {/* Link chi tiết sản phẩm với ID động */}
           <Route path="/product/:id" element={<ProductDetail />} />
-          
+          <Route path="/cart" element={<Cart />} /> {/* Đường dẫn giỏ hàng */}
           <Route path="/profile" element={<Profile />} />
         </Route>
 
-        {/* Nhóm các trang Auth (Trắng toàn màn hình) */}
+        {/* Nhóm các trang Auth */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -91,7 +91,10 @@ const AppRoutes = () => {
 function App() {
   return (
     <AuthProvider>
-       <AppRoutes />
+      {/* 3. Bao bọc bằng CartProvider để quản lý giỏ hàng toàn cục */}
+      <CartProvider>
+        <AppRoutes />
+      </CartProvider>
     </AuthProvider>
   );
 }
