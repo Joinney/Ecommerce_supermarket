@@ -30,7 +30,7 @@ export default function ProductDetail() {
           setMainMedia(defaultMedia);
         }
         setLoading(false);
-      })
+      }) 
       .catch(() => setLoading(false));
   }, [id]);
 
