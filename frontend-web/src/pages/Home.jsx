@@ -1,6 +1,6 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // 🚀 Cần thiết để điều hướng sang trang chi tiết
-import { ChevronRight, ArrowRight, Star, QrCode, Plus, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronRight, ArrowRight, Star, QrCode, Plus, Zap, AlertCircle } from 'lucide-react';
 
 /**
  * --- COMPONENT CON: THẺ SẢN PHẨM ---
@@ -27,14 +27,15 @@ const ProductCard = ({ p }) => {
           )}
           <img 
             src={mainImage} 
+            loading="lazy" // Tối ưu: Chỉ tải ảnh khi cuộn tới gần (Lazy Load)
             className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition duration-500 p-4" 
             alt={p.ten_san_pham} 
           />
           <button 
             className="absolute bottom-3 right-3 w-9 h-9 bg-white border border-slate-100 rounded-xl flex items-center justify-center shadow-lg text-[#006c49] hover:bg-[#006c49] hover:text-white transition-all transform active:scale-90 z-20"
             onClick={(e) => {
-              e.preventDefault(); // Ngăn chặn sự kiện chuyển trang khi nhấn nút Plus
-              // Thêm logic thêm vào giỏ hàng nhanh tại đây
+              e.preventDefault();
+              // Thêm logic thêm vào giỏ hàng tại đây
             }}
           >
             <Plus size={20} strokeWidth={3} />
@@ -43,11 +44,11 @@ const ProductCard = ({ p }) => {
         <div className="space-y-1">
           <div className="flex items-baseline gap-2">
             <span className="text-[#ff4d4f] font-black text-lg leading-none">
-              {currentPrice.toLocaleString()}đ
+              {Number(currentPrice).toLocaleString()}đ
             </span>
             {originalPrice && (
               <span className="text-slate-400 text-[10px] line-through font-bold">
-                {originalPrice.toLocaleString()}đ
+                {Number(originalPrice).toLocaleString()}đ
               </span>
             )}
           </div>
@@ -57,7 +58,7 @@ const ProductCard = ({ p }) => {
           <div className="flex gap-1 items-center pt-0.5">
             <span className="bg-red-50 text-[#ff4d4f] text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Giá hời</span>
             <span className="bg-[#e6f0ed] text-[#006c49] text-[8px] font-black px-1.5 py-0.5 rounded uppercase">
-              {p.ten_danh_muc || 'Demi Snap'}
+              {p.ten_danh_muc || 'Siêu thị'}
             </span>
           </div>
           <p className="text-[9px] text-slate-400 font-black mt-1 uppercase tracking-widest">
@@ -75,24 +76,34 @@ const ProductCard = ({ p }) => {
 export default function Home() {
   const [apiProducts, setApiProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Gọi API để lấy dữ liệu thật
   useEffect(() => {
-    // Luôn cuộn lên đầu trang khi vào Home
     window.scrollTo(0, 0);
     
-// Thay bằng:
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-fetch(`${API_BASE_URL}/api/products/all-products`)
-      .then(res => res.json())
-      .then(data => {
+    // Tối ưu URL: Tự động nhận diện Localhost hoặc Render Production qua biến môi trường
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        // Tối ưu API: Thêm limit để Render phản hồi nhanh hơn, tránh tải file JSON quá nặng
+        const response = await fetch(`${API_BASE_URL}/api/products/all-products?limit=12`);
+        
+        if (!response.ok) throw new Error("Không thể kết nối đến máy chủ Demi Mart");
+        
+        const data = await response.json();
         setApiProducts(data);
+        setError(null);
+      } catch (err) {
+        console.error("Lỗi API:", err);
+        setError(err.message);
+      } finally {
         setLoading(false);
-      })
-      .catch(err => {
-        console.error("Lỗi kết nối API Demi Mart:", err);
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchProducts();
   }, []);
 
   return (
@@ -166,18 +177,33 @@ fetch(`${API_BASE_URL}/api/products/all-products`)
 
         <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4">
           {loading ? (
-            // Hiển thị Skeleton Loading khi đang chờ API
-            [...Array(4)].map((_, i) => (
-              <div key={i} className="min-w-[210px] h-[300px] bg-slate-100 rounded-[32px] animate-pulse"></div>
+            // Skeleton Loading: Hiển thị khung chờ đẹp mắt
+            [...Array(6)].map((_, i) => (
+              <div key={i} className="min-w-[170px] md:min-w-[210px] space-y-4">
+                <div className="aspect-square bg-slate-100 rounded-[32px] animate-pulse"></div>
+                <div className="h-4 bg-slate-100 rounded w-3/4 animate-pulse"></div>
+                <div className="h-4 bg-slate-100 rounded w-1/2 animate-pulse"></div>
+              </div>
             ))
+          ) : error ? (
+            // Hiển thị lỗi nếu không fetch được dữ liệu
+            <div className="w-full py-10 flex flex-col items-center text-slate-400 gap-2">
+                <AlertCircle size={40} />
+                <p className="font-bold">Ối! {error}</p>
+                <button onClick={() => window.location.reload()} className="text-[#006c49] underline text-sm">Thử lại</button>
+            </div>
           ) : (
+            // Hiển thị danh sách sản phẩm thật
             apiProducts.map(p => (
               <ProductCard key={p.ma_san_pham} p={p} />
             ))
           )}
-          <div className="min-w-[120px] flex items-center justify-center text-[#006c49] font-black text-xs cursor-pointer hover:underline uppercase tracking-widest group">
-            Xem Tất Cả <ArrowRight size={16} className="ml-2 group-hover:translate-x-2 transition-transform" />
-          </div>
+          
+          {!loading && !error && (
+            <div className="min-w-[120px] flex items-center justify-center text-[#006c49] font-black text-xs cursor-pointer hover:underline uppercase tracking-widest group">
+              Xem Tất Cả <ArrowRight size={16} className="ml-2 group-hover:translate-x-2 transition-transform" />
+            </div>
+          )}
         </div>
       </section>
 
