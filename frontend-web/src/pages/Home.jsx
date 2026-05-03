@@ -6,18 +6,25 @@ import { ChevronRight, ArrowRight, Star, QrCode, Plus, Zap, AlertCircle } from '
  * --- COMPONENT CON: THẺ SẢN PHẨM ---
  */
 const ProductCard = ({ p }) => {
-  // Logic lấy ảnh: Ưu tiên ảnh chính, nếu không có lấy ảnh đầu tiên
+  // 1. Logic lấy ảnh: Ưu tiên ảnh chính
   const mainImage = p.media?.find(m => m.la_anh_chinh)?.duong_dan_url 
                  || p.media?.[0]?.duong_dan_url 
                  || "https://via.placeholder.com/300";
 
-  // Lấy thông tin giá từ biến thể đầu tiên
+  // 2. Lấy thông tin giá từ biến thể đầu tiên
   const variant = p.bien_the?.[0];
   const currentPrice = variant?.gia_khuyen_mai || variant?.gia_ban_le || 0;
   const originalPrice = variant?.gia_khuyen_mai ? variant?.gia_ban_le : null;
 
+  // 3. CHUẨN HÓA DỮ LIỆU URL (Mới)
+  // Lấy country_code và slug_danh_muc từ API (đã được JOIN trong SQL)
+  // Nếu dữ liệu null, sử dụng giá trị mặc định để tránh lỗi vỡ Link
+  const country = p.country_code || 'vn'; 
+  const category = p.slug_danh_muc || 'san-pham';
+
   return (
-    <Link to={`/product/${p.ma_san_pham}`} className="flex-shrink-0">
+    // CẬP NHẬT: URL theo cấu trúc /:country/product/:category/:id
+    <Link to={`/${country}/product/${category}/${p.ma_san_pham}`} className="flex-shrink-0">
       <div className="w-[170px] md:w-[210px] group cursor-pointer font-sans bg-white p-2 rounded-[32px] hover:shadow-2xl hover:shadow-slate-100 transition-all duration-500 border border-transparent hover:border-slate-50">
         <div className="relative aspect-square bg-[#f8fafc] rounded-[24px] overflow-hidden mb-3 border border-slate-50 group-hover:border-[#e6f0ed] transition-all">
           {variant?.la_ban_chay && (
@@ -27,7 +34,7 @@ const ProductCard = ({ p }) => {
           )}
           <img 
             src={mainImage} 
-            loading="lazy" // Tối ưu: Chỉ tải ảnh khi cuộn tới gần (Lazy Load)
+            loading="lazy"
             className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition duration-500 p-4" 
             alt={p.ten_san_pham} 
           />
@@ -35,7 +42,7 @@ const ProductCard = ({ p }) => {
             className="absolute bottom-3 right-3 w-9 h-9 bg-white border border-slate-100 rounded-xl flex items-center justify-center shadow-lg text-[#006c49] hover:bg-[#006c49] hover:text-white transition-all transform active:scale-90 z-20"
             onClick={(e) => {
               e.preventDefault();
-              // Thêm logic thêm vào giỏ hàng tại đây
+              // Logic thêm vào giỏ hàng
             }}
           >
             <Plus size={20} strokeWidth={3} />
@@ -81,13 +88,12 @@ export default function Home() {
   useEffect(() => {
     window.scrollTo(0, 0);
     
-    // Tối ưu URL: Tự động nhận diện Localhost hoặc Render Production qua biến môi trường
+    // Sử dụng biến môi trường hoặc mặc định localhost 5000
     const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        // Tối ưu API: Thêm limit để Render phản hồi nhanh hơn, tránh tải file JSON quá nặng
         const response = await fetch(`${API_BASE_URL}/api/products/all-products?limit=12`);
         
         if (!response.ok) throw new Error("Không thể kết nối đến máy chủ Demi Mart");
@@ -177,7 +183,6 @@ export default function Home() {
 
         <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4">
           {loading ? (
-            // Skeleton Loading: Hiển thị khung chờ đẹp mắt
             [...Array(6)].map((_, i) => (
               <div key={i} className="min-w-[170px] md:min-w-[210px] space-y-4">
                 <div className="aspect-square bg-slate-100 rounded-[32px] animate-pulse"></div>
@@ -186,14 +191,12 @@ export default function Home() {
               </div>
             ))
           ) : error ? (
-            // Hiển thị lỗi nếu không fetch được dữ liệu
             <div className="w-full py-10 flex flex-col items-center text-slate-400 gap-2">
                 <AlertCircle size={40} />
                 <p className="font-bold">Ối! {error}</p>
                 <button onClick={() => window.location.reload()} className="text-[#006c49] underline text-sm">Thử lại</button>
             </div>
           ) : (
-            // Hiển thị danh sách sản phẩm thật
             apiProducts.map(p => (
               <ProductCard key={p.ma_san_pham} p={p} />
             ))

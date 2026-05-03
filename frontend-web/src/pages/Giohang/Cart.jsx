@@ -12,6 +12,7 @@ export default function Cart() {
 
   const handleUpdateQuantity = (item, type) => {
     if (type === 'plus') {
+      // Lưu ý: Đảm bảo addToCart nhận đúng cấu trúc object để xử lý
       addToCart(item, { ma_bien_the: item.variantId }, 1);
     } else {
       if (item.quantity > 1) {
@@ -52,46 +53,57 @@ export default function Cart() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* DANH SÁCH SẢN PHẨM (Bên trái) */}
           <div className="lg:col-span-8 space-y-4">
-            {cart.map((item) => (
-              <div key={item.variantId} className="flex items-center gap-4 bg-white border border-slate-100 p-3 lg:p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                {/* Ảnh sản phẩm */}
-                <div className="w-20 h-20 lg:w-28 lg:h-28 bg-[#f9f9f9] rounded-xl overflow-hidden flex-shrink-0">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-contain p-2" />
-                </div>
+            {cart.map((item) => {
+              // TẠO URL ĐỘNG DỰA TRÊN DỮ LIỆU ĐÃ LƯU TRONG CART CONTEXT
+              const productDetailUrl = `/${item.countryCode}/product/${item.categorySlug}/${item.id}`;
+              
+              return (
+                <div key={item.variantId} className="flex items-center gap-4 bg-white border border-slate-100 p-3 lg:p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                  {/* Ảnh sản phẩm - Có link quay về chi tiết */}
+                  <Link to={productDetailUrl} className="w-20 h-20 lg:w-28 lg:h-28 bg-[#f9f9f9] rounded-xl overflow-hidden flex-shrink-0 group">
+                    <img 
+                      src={item.image} 
+                      alt={item.name} 
+                      className="w-full h-full object-contain p-2 group-hover:scale-110 transition-transform duration-300" 
+                    />
+                  </Link>
 
-                {/* Thông tin */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-black text-slate-800 text-sm lg:text-base uppercase truncate leading-tight italic">
-                      {item.name}
-                    </h3>
-                    <button onClick={() => removeFromCart(item.variantId)} className="text-slate-300 hover:text-red-500 transition-colors">
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                  <p className="text-[10px] lg:text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                    Phân loại: {item.variantName}
-                  </p>
-                  
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="font-black text-[#006c49] text-base lg:text-lg italic">
-                      {item.price.toLocaleString()}đ
-                    </span>
+                  {/* Thông tin */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start gap-2">
+                      <Link to={productDetailUrl} className="hover:text-[#006c49] transition-colors">
+                        <h3 className="font-black text-slate-800 text-sm lg:text-base uppercase truncate leading-tight italic">
+                          {item.name}
+                        </h3>
+                      </Link>
+                      <button onClick={() => removeFromCart(item.variantId)} className="text-slate-300 hover:text-red-500 transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] lg:text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                      Phân loại: {item.variantName}
+                    </p>
                     
-                    {/* Bộ tăng giảm số lượng */}
-                    <div className="flex items-center bg-slate-50 border border-slate-100 rounded-lg p-0.5">
-                      <button onClick={() => handleUpdateQuantity(item, 'minus')} className="w-7 h-7 flex items-center justify-center hover:bg-white rounded-md transition-all shadow-sm">
-                        <Minus size={14} />
-                      </button>
-                      <span className="w-8 text-center font-black text-sm">{item.quantity}</span>
-                      <button onClick={() => handleUpdateQuantity(item, 'plus')} className="w-7 h-7 flex items-center justify-center hover:bg-white rounded-md transition-all shadow-sm">
-                        <Plus size={14} />
-                      </button>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="font-black text-[#006c49] text-base lg:text-lg italic">
+                        {item.price.toLocaleString()}đ
+                      </span>
+                      
+                      {/* Bộ tăng giảm số lượng */}
+                      <div className="flex items-center bg-slate-50 border border-slate-100 rounded-lg p-0.5">
+                        <button onClick={() => handleUpdateQuantity(item, 'minus')} className="w-7 h-7 flex items-center justify-center hover:bg-white rounded-md transition-all shadow-sm">
+                          <Minus size={14} />
+                        </button>
+                        <span className="w-8 text-center font-black text-sm">{item.quantity}</span>
+                        <button onClick={() => handleUpdateQuantity(item, 'plus')} className="w-7 h-7 flex items-center justify-center hover:bg-white rounded-md transition-all shadow-sm">
+                          <Plus size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* TỔNG KẾT (Bên phải - Sticky) */}

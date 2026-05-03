@@ -1,7 +1,7 @@
 import React, { useState, useContext } from "react";
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { AuthProvider, AuthContext } from "./context/AuthContext"; 
-import { CartProvider } from "./context/CartContext"; // 1. Import CartProvider
+import { CartProvider } from "./context/CartContext"; 
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Footer from "./components/Footer";
@@ -11,7 +11,7 @@ import Signup from "./pages/Auth/Signup";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import Profile from "./pages/Profile/Profile";
 import ProductDetail from "./pages/Productdetail/ProductDetail";
-import Cart from "./pages/Giohang/Cart"; // 2. Import trang Cart mới tạo
+import Cart from "./pages/Giohang/Cart";
 
 /**
  * 1. MAIN LAYOUT
@@ -69,8 +69,11 @@ const AppRoutes = () => {
         {/* Nhóm các trang có Header/Footer/Sidebar */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
-          <Route path="/cart" element={<Cart />} /> {/* Đường dẫn giỏ hàng */}
+          
+          {/* CẤU TRÚC URL MỚI CỦA DEMI: Quốc gia / product / Danh mục / ID */}
+          <Route path="/:country_code/product/:category_slug/:id" element={<ProductDetail />} />
+          
+          <Route path="/cart" element={<Cart />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
 
@@ -91,7 +94,6 @@ const AppRoutes = () => {
 function App() {
   return (
     <AuthProvider>
-      {/* 3. Bao bọc bằng CartProvider để quản lý giỏ hàng toàn cục */}
       <CartProvider>
         <AppRoutes />
       </CartProvider>
