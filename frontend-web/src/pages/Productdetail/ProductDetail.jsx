@@ -51,6 +51,11 @@ export default function ProductDetail() {
   const originalPrice = selectedVariant?.gia_khuyen_mai ? selectedVariant?.gia_ban_le : null;
   const shareUrl = window.location.href;
 
+  // QUAN TRỌNG: Xử lý link ảnh tuyệt đối để bot mạng xã hội đọc được
+  const ogImageUrl = mainMedia?.duong_dan_url?.startsWith('http') 
+    ? mainMedia.duong_dan_url 
+    : `${window.location.origin}${mainMedia?.duong_dan_url}`;
+
   const handleBuyNow = () => {
     if (!product || !selectedVariant) return;
     navigate('/checkout', { 
@@ -79,13 +84,24 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[#006c49] selection:text-white pb-8">
-      {/* Cấu hình SEO & Social Card động */}
+      {/* SỬA LỖI HIỂN THỊ KHI CHIA SẺ: Cấu hình đầy đủ Open Graph */}
       <Helmet>
         <title>{product.ten_san_pham} | Demi Mart</title>
-        <meta property="og:title" content={product.ten_san_pham} />
-        <meta property="og:description" content={product.mo_ta_ngan || "Sản phẩm sạch từ Demi Mart"} />
-        <meta property="og:image" content={mainMedia?.duong_dan_url} />
+        <meta name="description" content={product.mo_ta_ngan || "Sản phẩm sạch từ Demi Mart"} />
+        
+        {/* Facebook / Open Graph */}
+        <meta property="og:type" content="product" />
         <meta property="og:url" content={shareUrl} />
+        <meta property="og:title" content={`${product.ten_san_pham} - Demi Mart`} />
+        <meta property="og:description" content={product.mo_ta_ngan || "Mua ngay sản phẩm tươi sạch tại Demi Mart."} />
+        <meta property="og:image" content={ogImageUrl} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={product.ten_san_pham} />
+        <meta name="twitter:image" content={ogImageUrl} />
       </Helmet>
 
       <div className="w-full max-w-[1150px] 2xl:max-w-[1400px] mx-auto px-2 sm:px-6 lg:px-10 pt-4 lg:pt-10 transition-all duration-300">
@@ -143,7 +159,7 @@ export default function ProductDetail() {
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><Share2 size={12}/> Chia sẻ:</span>
                 <div className="flex gap-2">
                   <FacebookShareButton url={shareUrl} quote={product.ten_san_pham}><FacebookIcon size={28} round /></FacebookShareButton>
-                  <FacebookMessengerShareButton url={shareUrl} appId="YOUR_FB_APP_ID"><FacebookMessengerIcon size={28} round /></FacebookMessengerShareButton>
+                  <FacebookMessengerShareButton url={shareUrl} appId="123456789123456"><FacebookMessengerIcon size={28} round /></FacebookMessengerShareButton>
                   <button onClick={() => window.open(`https://zalo.me/s/share?link=${encodeURIComponent(shareUrl)}`, '_blank')} className="hover:scale-110 transition-transform">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_Zalo.svg" alt="Zalo" className="w-7 h-7" />
                   </button>
